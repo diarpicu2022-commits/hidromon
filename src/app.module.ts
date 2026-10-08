@@ -3,7 +3,9 @@ import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsuariosController } from './usuarios/usuarios.controller';
+import { SensoresController } from './sensores/sensores.controller';
 import { UsuariosService } from './usuarios/usuarios.service';
+import { SensoresService } from './sensores/sensores.service';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -17,7 +19,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       serviceId: 'hidromon-nestjs',
     }),
   ],
-  controllers: [AppController, UsuariosController],
-  providers: [AppService, UsuariosService],
+  controllers: [AppController, UsuariosController, SensoresController],
+  providers: [AppService, UsuariosService, SensoresService],
 })
 export class AppModule {}
