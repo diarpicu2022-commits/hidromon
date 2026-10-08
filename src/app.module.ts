@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { UsuariosController } from './usuarios/usuarios.controller';
+import { UsuariosService } from './usuarios/usuarios.service';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -15,7 +17,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       serviceId: 'hidromon-nestjs',
     }),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, UsuariosController],
+  providers: [AppService, UsuariosService],
 })
 export class AppModule {}
