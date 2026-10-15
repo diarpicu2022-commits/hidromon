@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Env } from './env.model';
 import { UsuariosController } from './usuarios/usuarios.controller';
 import { SensoresController } from './sensores/sensores.controller';
 import { ZonasController } from './zonas/zonas.controller';
@@ -13,19 +13,27 @@ import { ZonasService } from './zonas/zonas.service';
 import { LecturasService } from './lecturas/lecturas.service';
 import { AlertasService } from './alertas/alertas.service';
 
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
-
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'hidromon-nestjs',
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    TypeOrmModule.forRootAsync({
+      useFactory: (configService: ConfigService<Env>) => ({
+        type: 'postgres',
+        host: configService.getOrThrow('POSTGRES_HOST'),
+        port: Number(configService.getOrThrow('POSTGRES_PORT')),
+        username: configService.getOrThrow('POSTGRES_USER'),
+        password: configService.getOrThrow('POSTGRES_PASSWORD'),
+        database: configService.getOrThrow('POSTGRES_DB'),
+        autoLoadEntities: true,
+        synchronize: true,
+        entities: [],
+      }),
+      inject: [ConfigService],
     }),
   ],
-  controllers: [AppController, UsuariosController, SensoresController, ZonasController, LecturasController, AlertasController],
-  providers: [AppService, UsuariosService, SensoresService, ZonasService, LecturasService, AlertasService],
+  controllers: [UsuariosController, SensoresController, ZonasController, LecturasController, AlertasController],
+  providers: [UsuariosService, SensoresService, ZonasService, LecturasService, AlertasService],
 })
 export class AppModule {}
