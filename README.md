@@ -110,14 +110,29 @@ curl -X PUT http://localhost:3000/lecturas/1 \
 
 ## 🚀 Cómo ejecutarlo
 
-Necesitas **Node.js 24** o superior.
+Necesitas **Node.js 24** o superior y **Docker** para la base de datos.
 
 ```bash
 git clone https://github.com/diarpicu2022-commits/hidromon.git
 cd hidromon
 npm install
+cp .env-example .env       # y llénalo con los datos de abajo
+docker compose up -d       # levanta Postgres (5432) y pgAdmin (5050)
 npm run start:dev
 ```
+
+El `.env` no se sube al repo. Para el Postgres del `docker-compose.yml` queda así:
+
+```env
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=hidromon_db
+POSTGRES_USER=hidromon_user
+POSTGRES_PASSWORD=hidromon_password
+```
+
+Si falta una variable, la app no arranca: `app.module.ts` las lee con `configService.getOrThrow`.
+pgAdmin queda en `http://localhost:5050`.
 
 La API queda en `http://localhost:3000`. Para usar otro puerto: `PORT=4000 npm run start:dev`.
 
@@ -132,8 +147,9 @@ La API queda en `http://localhost:3000`. Para usar otro puerto: `PORT=4000 npm r
 
 ```
 src/
-├── main.ts
-├── app.module.ts          # registra los controladores y servicios
+├── main.ts                # arranca la app con el ValidationPipe global
+├── app.module.ts          # ConfigModule, TypeORM (Postgres) y los módulos
+├── env.model.ts           # variables de entorno que usa la app
 ├── usuarios/
 │   ├── usuario.model.ts   # interfaz del recurso
 │   ├── usuario.dto.ts     # DTO de creación y edición con class-validator
@@ -148,8 +164,7 @@ src/
 
 ## ⚠️ Limitaciones conocidas
 
-- Los datos viven **en memoria**: al reiniciar el servidor vuelven los 15 registros iniciales de cada recurso.
-- Los DTO tienen validaciones, pero todavía no se aplican porque `main.ts` no activa el `ValidationPipe`.
+- La conexión a Postgres ya está configurada, pero todavía no hay entidades: los datos siguen **en memoria** y al reiniciar el servidor vuelven los 15 registros iniciales de cada recurso.
 - `npm run test` no arranca con la configuración actual: NestJS 12 se distribuye como ES Module y el Jest de la plantilla no lo carga. Le pasa igual a la plantilla de la práctica.
 
 ## 🤝 Cómo contribuir
