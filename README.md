@@ -66,11 +66,13 @@ Los cinco recursos comparten las mismas rutas:
 | `PUT` | `/{recurso}/:id` | Actualiza un registro |
 | `DELETE` | `/{recurso}/:id` | Elimina un registro |
 
+> `usuarios` ya sigue el patrón de `users` de la profe: se busca por `GET /usuarios/:id` y el usuario `1` responde 403 a propósito, como en clase.
+
 Y cada uno trae una búsqueda propia:
 
 | Recurso | Búsqueda | Ejemplo |
 |---|---|---|
-| `usuarios` | `GET /usuarios/nombre/:nombre` → devuelve el correo | `/usuarios/nombre/Diego Pinta` |
+| `usuarios` | `GET /usuarios/search/:nombre` → devuelve el correo | `/usuarios/search/Diego Pinta` |
 | `sensores` | `GET /sensores/tipo/:tipo` | `/sensores/tipo/Suelo` |
 | `zonas` | `GET /zonas/cultivo/:cultivo` | `/zonas/cultivo/Papa` |
 | `lecturas` | `GET /lecturas/sensor/:sensorId` | `/lecturas/sensor/1` |
