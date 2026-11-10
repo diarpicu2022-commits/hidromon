@@ -1,8 +1,7 @@
-export interface Usuario {
-  id: string;
+export interface IUsuario {
+  id: number;
   nombre: string;
   email: string;
   rol: string;
   isActive?: boolean;
-  nickname?: string;
 }
