@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -61,7 +62,13 @@ export class ZonasService {
 
   async delete(id: number) {
     const zona = await this.findOne(id);
-    await this.zonaRepository.delete(zona.id);
+    try {
+      await this.zonaRepository.delete(zona.id);
+    } catch {
+      throw new ConflictException(
+        'La zona tiene sensores o alertas asociados, no se puede eliminar',
+      );
+    }
     return {
       message: 'Zona eliminada correctamente',
     };
