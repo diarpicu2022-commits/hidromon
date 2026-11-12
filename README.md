@@ -163,7 +163,7 @@ En `web/` hay un tablero con un invernadero 3D que consume la API y sirve para v
   los **sensores** cambian de color según su última lectura (verde dentro del rango, azul por debajo, rojo por encima,
   gris sin datos) y las **alertas** aparecen como un cono sobre la zona. Clic en una zona o sensor para ver su detalle
   y enviar una lectura aleatoria (si sale del rango se crea la alerta sola). A la derecha hay tarjetas de datos en
-  tiempo real, la gráfica de evolución de la humedad (24 h, 7 d y 30 d) y el estado del sistema.
+  tiempo real y el estado del sistema.
 - **Historial:** últimas lecturas y alertas.
 - **Crear datos:** formularios para crear zonas, sensores, lecturas y alertas.
 

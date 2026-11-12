@@ -1,7 +1,6 @@
 import { api } from './api.js';
 import { ESTADOS, buildWorld } from './model.js';
 import { createScene } from './scene.js';
-import { drawChart } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
@@ -12,11 +11,8 @@ let zonas = [];
 let selected = null; // { type, id }
 let tab = 'zona';
 let view = 'inicio';
-let horas = 24;
 let online = null;
 let lastUpdate = null;
-let hoverX = null;
-let puntosGrafica = [];
 
 const sceneApi = createScene($('scene'), (hit) => select(hit));
 
@@ -25,7 +21,6 @@ function select(hit) {
   sceneApi.setSelected(hit ? hit.type + ':' + hit.id : null);
   sceneApi.update(zonas);
   renderDetail();
-  renderChart();
 }
 
 // ---------- utilidades ----------
@@ -64,7 +59,6 @@ $('nav').addEventListener('click', (e) => {
   view = b.dataset.view;
   document.querySelectorAll('#nav button').forEach((x) => x.classList.toggle('active', x === b));
   ['inicio', 'historial', 'crear'].forEach((v) => ($('view-' + v).hidden = v !== view));
-  if (view === 'inicio') renderChart();
 });
 
 function tick() {
@@ -97,7 +91,6 @@ function renderAll() {
   renderOnline();
   renderLegend();
   renderKpis();
-  renderChart();
   renderSystem();
   renderDetail();
   renderTables();
@@ -156,58 +149,6 @@ function renderKpis() {
     kpi('🌱', 'Zonas', String(raw.zonas.length), el('small', { textContent: cultivos + (cultivos === 1 ? ' cultivo' : ' cultivos') })),
   );
 }
-
-// ---------- gráfica ----------
-function puntosDeAlcance() {
-  const sensorZona = new Map();
-  zonas.forEach((z) => z.sensores.forEach((s) => sensorZona.set(s.id, z)));
-  let lecturas = raw.lecturas.filter((l) => sensorZona.has(l.sensor?.id));
-  let rango = null;
-  let alcance = 'Todas las zonas';
-
-  if (selected?.type === 'zona') {
-    const z = zonas.find((x) => x.id === selected.id);
-    if (z) {
-      lecturas = lecturas.filter((l) => sensorZona.get(l.sensor.id) === z);
-      rango = { min: z.humedadMin, max: z.humedadMax };
-      alcance = 'Zona ' + z.nombre + ' · rango ' + z.humedadMin + '–' + z.humedadMax + '%';
-    }
-  } else if (selected?.type === 'sensor') {
-    const z = sensorZona.get(selected.id);
-    const s = z?.sensores.find((x) => x.id === selected.id);
-    if (s) {
-      lecturas = lecturas.filter((l) => l.sensor.id === s.id);
-      rango = { min: z.humedadMin, max: z.humedadMax };
-      alcance = 'Sensor ' + s.codigo + ' · ' + z.nombre;
-    }
-  }
-  return { puntos: lecturas.map((l) => ({ t: new Date(l.fecha).getTime(), v: l.valor })), rango, alcance };
-}
-
-function renderChart() {
-  if (view !== 'inicio') return;
-  const { puntos, rango, alcance } = puntosDeAlcance();
-  $('chart-scope').textContent = alcance;
-  const hasta = Date.now();
-  puntosGrafica = drawChart($('chart'), puntos, rango, hasta - horas * 3600e3, hasta, hoverX);
-}
-
-$('chips').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-h]');
-  if (!b) return;
-  horas = Number(b.dataset.h);
-  document.querySelectorAll('#chips button').forEach((x) => x.classList.toggle('active', x === b));
-  renderChart();
-});
-$('chart').addEventListener('mousemove', (e) => {
-  hoverX = e.offsetX;
-  renderChart();
-});
-$('chart').addEventListener('mouseleave', () => {
-  hoverX = null;
-  renderChart();
-});
-new ResizeObserver(() => renderChart()).observe($('chart'));
 
 // ---------- estado del sistema ----------
 function renderSystem() {
