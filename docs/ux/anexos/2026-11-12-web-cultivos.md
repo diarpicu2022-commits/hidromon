@@ -49,7 +49,7 @@ Nada fuera de esto sin permiso fechado.
   - Texto separado por comas: mostrar cultivos en la tabla de zonas y en el detalle.
   - `badge`: sigue siendo solo estado de humedad o de alerta. No se usa para cultivos.
 - **Píldora.** Alto mínimo 44 px, radio 99 px, borde 1 px `--line`, fondo `#fbfdfc` como los
-  `input`. Marcada: fondo `--primary-soft`, borde y texto `--primary`, peso 600. La casilla nativa
+  `input`. Marcada: fondo `--primary-soft`, borde `--primary`, texto `--text` (enmienda 1), peso 600. La casilla nativa
   queda visible a la izquierda con `accent-color: var(--primary)`. Foco: `outline` 2 px
   `--primary` como los `input` actuales. Sin transición.
 - **Espaciado.** 8 px entre píldoras, con salto de línea.
@@ -58,6 +58,12 @@ Nada fuera de esto sin permiso fechado.
 - **Pestaña Cultivos.** Usa el mismo motor de tablas y formularios: columnas ID, Nombre, Zonas.
   Formulario con Nombre y Descripción (opcional).
 - **Detalle de zona.** Fila «Cultivos sembrados» con la lista en texto, o «ninguno» en gris.
+
+### Enmiendas
+
+1. **2026-11-12, aprobada por Diego.** El texto de la píldora marcada pasa de `--primary` a `--text`.
+   Motivo: `--primary` sobre `--primary-soft` midió 3,39:1, por debajo de AA. El borde, el fondo y la
+   casilla marcada siguen señalando la selección. No se agregan tokens.
 
 ## 6. Estados
 
@@ -86,7 +92,16 @@ Se llena al terminar cada paso.
 - Foco por teclado: el contorno de 2 px `--primary` se ve en la píldora enfocada. Cumple.
 - Envío: marcar Lechuga en la zona 3 y guardar deja `cultivos: [Tomate, Lechuga]` en `GET /zonas`. Cumple.
 - Choque encontrado y corregido: la clase `.pill` ya la usaban las etiquetas 3D (`scene.js`). La píldora del formulario pasó a `.choice`.
-- **Falla:** contraste del texto marcado (`--primary` sobre `--primary-soft`) 3,39:1, por debajo de 4,5:1 (AA). El texto sin marcar da 13,47:1. Pendiente de decisión, porque corregirlo cambia el contrato.
+- **Falla:** contraste del texto marcado (`--primary` sobre `--primary-soft`) 3,39:1, por debajo de 4,5:1 (AA). El texto sin marcar da 13,47:1. Pendiente de decisión, porque corregirlo cambia el contrato. Resuelto con la enmienda 1: tras el cambio mide 11,97:1.
+
+**Paso 2 (2026-11-12), pestaña Cultivos, medido en Chrome con la API real.**
+
+- Seis pestañas sin desborde horizontal a 1536 px.
+- Tabla con ID, Nombre y Zonas. Lechuga y Tomate muestran «Invernadero A», y Fresa y Papa muestran «–».
+- Crear «Maíz» con descripción: aviso «Cultivo creado correctamente» y queda en `GET /cultivos`.
+- Repetir «Papa»: aviso de error con el mensaje 409 de la API, «Ya existe un cultivo llamado Papa».
+- Editar carga la descripción guardada y guarda el cambio. Eliminar pide «¿Seguro?» en el primer clic y borra en el segundo.
+- El título del formulario dice «Nuevo cultivo» gracias a un campo `nuevo` en la definición.
 
 ## 9. Privacidad
 

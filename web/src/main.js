@@ -379,6 +379,8 @@ function renderTables() {
 
 // ---------- gestionar: crear, editar y eliminar ----------
 const nombreSensor = (s) => s.codigo + ' · ' + s.tipo;
+// Nombres de las zonas que tienen sembrado el cultivo, o «–» si ninguna.
+const zonasDeCultivo = (id) => raw.zonas.filter((z) => (z.cultivos ?? []).some((c) => c.id === id)).map((z) => z.nombre).join(', ') || '–';
 
 const RES = {
   zona: {
@@ -449,6 +451,21 @@ const RES = {
         { name: 'mensaje', label: 'Mensaje', type: 'text', required: true },
       ];
     },
+  },
+  cultivo: {
+    title: 'Cultivo',
+    nuevo: 'Nuevo cultivo',
+    plural: 'Cultivos',
+    recurso: 'cultivos',
+    hint: 'Catálogo de cultivos. Se asignan a las zonas desde el formulario de cada zona.',
+    lista: () => raw.cultivos,
+    cabeceras: ['ID', 'Nombre', 'Zonas'],
+    celdas: (c) => [c.id, c.nombre, zonasDeCultivo(c.id)],
+    valores: (c) => ({ nombre: c.nombre, descripcion: c.descripcion ?? '' }),
+    campos: () => [
+      { name: 'nombre', label: 'Nombre', type: 'text', required: true },
+      { name: 'descripcion', label: 'Descripción (opcional)', type: 'text' },
+    ],
   },
   usuario: {
     title: 'Usuario',
@@ -551,7 +568,7 @@ function renderForm(keepValues = false) {
     });
   }
 
-  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : 'Nueva ' + def.title.toLowerCase();
+  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : def.nuevo ?? 'Nueva ' + def.title.toLowerCase();
   $('form-hint').textContent = def.hint;
 
   const nodes = def.campos().map((f) => {

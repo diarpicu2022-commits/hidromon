@@ -181,7 +181,7 @@ fieldset.multi legend { font-size: 13px; color: var(--muted); padding: 0; margin
 .choice input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
 .choice input:focus { outline: none; }
 .choice:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: -1px; }
-.choice:has(input:checked) { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.choice:has(input:checked) { background: var(--primary-soft); border-color: var(--primary); color: var(--text); font-weight: 600; }
 button.link { padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; min-height: 44px; }
 button.primary { padding: 11px 14px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(47, 125, 246, 0.3); }
 button.primary:hover { filter: brightness(1.07); }
