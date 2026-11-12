@@ -1,50 +1,36 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Sensor } from './sensor.model';
-import { CreateSensorDto, UpdateSensorDto } from './sensor.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CreateSensorDto, UpdateSensorDto } from './dtos/sensor.dto';
+import { Sensor } from './entities/sensor.entity';
 
 @Injectable()
 export class SensoresService {
-  constructor() {}
+  constructor(
+    @InjectRepository(Sensor)
+    private sensorRepository: Repository<Sensor>,
+  ) {}
 
-  private sensores: Sensor[] = [
-    { id: '1', codigo: 'HS-001', tipo: 'Suelo', zonaId: '1', isActive: true },
-    { id: '2', codigo: 'HA-002', tipo: 'Ambiental', zonaId: '1', isActive: true },
-    { id: '3', codigo: 'HS-003', tipo: 'Suelo', zonaId: '2', isActive: true },
-    { id: '4', codigo: 'HA-004', tipo: 'Ambiental', zonaId: '2', isActive: true },
-    { id: '5', codigo: 'HS-005', tipo: 'Suelo', zonaId: '3', isActive: true },
-    { id: '6', codigo: 'HA-006', tipo: 'Ambiental', zonaId: '3', isActive: true },
-    { id: '7', codigo: 'HS-007', tipo: 'Suelo', zonaId: '4', isActive: true },
-    { id: '8', codigo: 'HA-008', tipo: 'Ambiental', zonaId: '4', isActive: true },
-    { id: '9', codigo: 'HS-009', tipo: 'Suelo', zonaId: '5', isActive: true },
-    { id: '10', codigo: 'HA-010', tipo: 'Ambiental', zonaId: '5', isActive: true },
-    { id: '11', codigo: 'HS-011', tipo: 'Suelo', zonaId: '6', isActive: true },
-    { id: '12', codigo: 'HA-012', tipo: 'Ambiental', zonaId: '6', isActive: true },
-    { id: '13', codigo: 'HS-013', tipo: 'Suelo', zonaId: '7', isActive: true },
-    { id: '14', codigo: 'HA-014', tipo: 'Ambiental', zonaId: '7', isActive: true },
-    { id: '15', codigo: 'HS-015', tipo: 'Suelo', zonaId: '8', isActive: true },
-  ];
-
-
-  findAll(): Sensor[] {
-    // logica de negocio
-    return this.sensores.filter((sensor) => sensor.isActive);
+  async findAll() {
+    const sensores = await this.sensorRepository.find({
+      relations: { zona: true },
+    });
+    return {
+      data: sensores,
+      count: sensores.length,
+    };
   }
 
-  findById(id: string): Sensor | undefined {
-    console.log('.:: Sensor ID: ', id);
-    const sensor = this.sensores.find((sensor) => sensor.id === id);
-    console.log('.:: sensor buscado: ', sensor);
-    if (sensor === undefined) {
-      // Simulación de sensor no encontrado, error 404
-      throw new NotFoundException(`Sensor con ID ${id} no existe`);
-    }
+  async findById(id: number) {
+    const sensor = await this.findOne(id);
 
     // Simulación para error de permisos
-    if (sensor.id === '1') {
+    if (sensor.id === 1) {
       throw new ForbiddenException(
         `No tienes permisos para acceder al sensor con ID ${id}`,
       );
@@ -52,54 +38,74 @@ export class SensoresService {
     return sensor;
   }
 
-  search(tipo: string): Sensor[] {
-    const data = this.sensores.filter((sensor) => sensor.tipo === tipo);
-    if (data.length === 0) {
+  async search(tipo: string) {
+    const sensores = await this.sensorRepository.find({
+      where: { tipo },
+      relations: { zona: true },
+    });
+    if (sensores.length === 0) {
       throw new NotFoundException(`Sensores de tipo ${tipo} no existen`);
     }
-    return data;
-  }
-
-  create(sensorPayload: CreateSensorDto) {
-    const newSensor = {
-      ...sensorPayload,
-      id: `${new Date().getTime()}`,
-      isActive: true,
-    };
-    this.sensores.push(newSensor);
-
     return {
-      message: 'Sensor creado correctamente',
-      data: sensorPayload,
+      data: sensores,
+      count: sensores.length,
     };
   }
 
-  delete(id: string) {
-    const position = this.sensores.findIndex((sensor) => sensor.id === id);
-    if (position === -1) {
+  async create(sensorPayload: CreateSensorDto) {
+    try {
+      const { zonaId, ...fields } = sensorPayload;
+      const newSensor = await this.sensorRepository.save({
+        ...fields,
+        zona: { id: zonaId },
+      });
+      return {
+        message: 'Sensor creado correctamente',
+        data: newSensor,
+      };
+    } catch {
+      throw new BadRequestException(
+        'Error al crear el sensor: revisa que la zona exista y que el código no esté repetido',
+      );
+    }
+  }
+
+  async delete(id: number) {
+    const sensor = await this.findOne(id);
+    await this.sensorRepository.delete(sensor.id);
+    return {
+      message: 'Sensor eliminado correctamente',
+    };
+  }
+
+  async update(id: number, changes: UpdateSensorDto) {
+    const sensor = await this.findOne(id);
+    const { zonaId, ...fields } = changes;
+    const updatedSensor = this.sensorRepository.merge(sensor, fields);
+    if (zonaId !== undefined) {
+      updatedSensor.zona = { id: zonaId } as Sensor['zona'];
+    }
+    try {
+      const savedSensor = await this.sensorRepository.save(updatedSensor);
+      return {
+        message: 'Sensor actualizado correctamente',
+        data: savedSensor,
+      };
+    } catch {
+      throw new BadRequestException(
+        'Error al actualizar el sensor: revisa que la zona exista y que el código no esté repetido',
+      );
+    }
+  }
+
+  private async findOne(id: number) {
+    const sensor = await this.sensorRepository.findOne({
+      where: { id },
+      relations: { zona: true },
+    });
+    if (!sensor) {
       throw new NotFoundException(`Sensor con ID ${id} no existe`);
     }
-    this.sensores.splice(position, 1);
-    return {
-      msg: 'Sensor eliminado correctamente',
-    };
-  }
-
-  update(id: string, changes: UpdateSensorDto) {
-    const position = this.sensores.findIndex((sensor) => sensor.id === id);
-    if (position === -1) {
-      throw new NotFoundException(`Sensor con ID ${id} no existe`);
-    }
-    const currentData = this.sensores[position];
-    const updateSensor = {
-      ...currentData,
-      ...changes,
-    };
-    this.sensores[position] = updateSensor;
-
-    return {
-      msg: 'Sensor actualizado',
-      data: updateSensor,
-    };
+    return sensor;
   }
 }
