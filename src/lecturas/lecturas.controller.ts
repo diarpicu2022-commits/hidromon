@@ -4,10 +4,11 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
 } from '@nestjs/common';
-import { CreateLecturaDto, UpdateLecturaDto } from './lectura.dto';
+import { CreateLecturaDto, UpdateLecturaDto } from './dtos/lectura.dto';
 import { LecturasService } from './lecturas.service';
 
 @Controller('lecturas')
@@ -20,12 +21,12 @@ export class LecturasController {
   }
 
   @Get(':id')
-  getLecturaById(@Param('id') id: string) {
+  getLecturaById(@Param('id', ParseIntPipe) id: number) {
     return this.lecturasService.findById(id);
   }
 
   @Get('search/:sensorId')
-  getLecturasBySensorId(@Param('sensorId') sensorId: string) {
+  getLecturasBySensorId(@Param('sensorId', ParseIntPipe) sensorId: number) {
     return this.lecturasService.search(sensorId);
   }
 
@@ -35,12 +36,12 @@ export class LecturasController {
   }
 
   @Delete(':id')
-  deleteLectura(@Param('id') id: string) {
+  deleteLectura(@Param('id', ParseIntPipe) id: number) {
     return this.lecturasService.delete(id);
   }
 
   @Put(':id')
-  updateLectura(@Param('id') id: string, @Body() changes: UpdateLecturaDto) {
+  updateLectura(@Param('id', ParseIntPipe) id: number, @Body() changes: UpdateLecturaDto) {
     return this.lecturasService.update(id, changes);
   }
 }

@@ -1,50 +1,37 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Lectura } from './lectura.model';
-import { CreateLecturaDto, UpdateLecturaDto } from './lectura.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CreateLecturaDto, UpdateLecturaDto } from './dtos/lectura.dto';
+import { Lectura } from './entities/lectura.entity';
 
 @Injectable()
 export class LecturasService {
-  constructor() {}
+  constructor(
+    @InjectRepository(Lectura)
+    private lecturaRepository: Repository<Lectura>,
+  ) {}
 
-  private lecturas: Lectura[] = [
-    { id: '1', sensorId: '1', valor: 72, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '2', sensorId: '1', valor: 58, fecha: '2026-10-01 12:00', isActive: true },
-    { id: '3', sensorId: '2', valor: 81, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '4', sensorId: '3', valor: 66, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '5', sensorId: '4', valor: 77, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '6', sensorId: '5', valor: 70, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '7', sensorId: '5', valor: 88, fecha: '2026-10-01 12:00', isActive: true },
-    { id: '8', sensorId: '6', valor: 74, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '9', sensorId: '7', valor: 62, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '10', sensorId: '8', valor: 69, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '11', sensorId: '9', valor: 48, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '12', sensorId: '10', valor: 65, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '13', sensorId: '11', valor: 59, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '14', sensorId: '13', valor: 45, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '15', sensorId: '15', valor: 73, fecha: '2026-10-01 06:00', isActive: true },
-  ];
-
-
-  findAll(): Lectura[] {
-    // logica de negocio
-    return this.lecturas.filter((lectura) => lectura.isActive);
+  async findAll() {
+    const lecturas = await this.lecturaRepository.find({
+      relations: { sensor: true },
+      order: { fecha: 'DESC' },
+    });
+    return {
+      data: lecturas,
+      count: lecturas.length,
+    };
   }
 
-  findById(id: string): Lectura | undefined {
-    console.log('.:: Lectura ID: ', id);
-    const lectura = this.lecturas.find((lectura) => lectura.id === id);
-    console.log('.:: lectura buscada: ', lectura);
-    if (lectura === undefined) {
-      // Simulación de lectura no encontrada, error 404
-      throw new NotFoundException(`Lectura con ID ${id} no existe`);
-    }
+  async findById(id: number) {
+    const lectura = await this.findOne(id);
 
     // Simulación para error de permisos
-    if (lectura.id === '1') {
+    if (lectura.id === 1) {
       throw new ForbiddenException(
         `No tienes permisos para acceder a la lectura con ID ${id}`,
       );
@@ -52,54 +39,78 @@ export class LecturasService {
     return lectura;
   }
 
-  search(sensorId: string): Lectura[] {
-    const data = this.lecturas.filter((lectura) => lectura.sensorId === sensorId);
-    if (data.length === 0) {
+  async search(sensorId: number) {
+    const lecturas = await this.lecturaRepository.find({
+      where: { sensor: { id: sensorId } },
+      relations: { sensor: true },
+      order: { fecha: 'DESC' },
+    });
+    if (lecturas.length === 0) {
       throw new NotFoundException(`Lecturas del sensor ${sensorId} no existen`);
     }
-    return data;
-  }
-
-  create(lecturaPayload: CreateLecturaDto) {
-    const newLectura = {
-      ...lecturaPayload,
-      id: `${new Date().getTime()}`,
-      isActive: true,
-    };
-    this.lecturas.push(newLectura);
-
     return {
-      message: 'Lectura creada correctamente',
-      data: lecturaPayload,
+      data: lecturas,
+      count: lecturas.length,
     };
   }
 
-  delete(id: string) {
-    const position = this.lecturas.findIndex((lectura) => lectura.id === id);
-    if (position === -1) {
+  async create(lecturaPayload: CreateLecturaDto) {
+    try {
+      const { sensorId, ...fields } = lecturaPayload;
+      const newLectura = await this.lecturaRepository.save({
+        ...fields,
+        sensor: { id: sensorId },
+      });
+      return {
+        message: 'Lectura creada correctamente',
+        data: newLectura,
+      };
+    } catch {
+      throw new BadRequestException(
+        'Error al crear la lectura: revisa que el sensor exista',
+      );
+    }
+  }
+
+  async delete(id: number) {
+    const lectura = await this.findOne(id);
+    await this.lecturaRepository.delete(lectura.id);
+    return {
+      message: 'Lectura eliminada correctamente',
+    };
+  }
+
+  async update(id: number, changes: UpdateLecturaDto) {
+    const lectura = await this.findOne(id);
+    const { sensorId, ...fields } = changes;
+    const updatedLectura = this.lecturaRepository.merge(lectura, {
+      ...fields,
+      fecha: fields.fecha ? new Date(fields.fecha) : lectura.fecha,
+    });
+    if (sensorId !== undefined) {
+      updatedLectura.sensor = { id: sensorId } as Lectura['sensor'];
+    }
+    try {
+      const savedLectura = await this.lecturaRepository.save(updatedLectura);
+      return {
+        message: 'Lectura actualizada correctamente',
+        data: savedLectura,
+      };
+    } catch {
+      throw new BadRequestException(
+        'Error al actualizar la lectura: revisa que el sensor exista',
+      );
+    }
+  }
+
+  private async findOne(id: number) {
+    const lectura = await this.lecturaRepository.findOne({
+      where: { id },
+      relations: { sensor: true },
+    });
+    if (!lectura) {
       throw new NotFoundException(`Lectura con ID ${id} no existe`);
     }
-    this.lecturas.splice(position, 1);
-    return {
-      msg: 'Lectura eliminada correctamente',
-    };
-  }
-
-  update(id: string, changes: UpdateLecturaDto) {
-    const position = this.lecturas.findIndex((lectura) => lectura.id === id);
-    if (position === -1) {
-      throw new NotFoundException(`Lectura con ID ${id} no existe`);
-    }
-    const currentData = this.lecturas[position];
-    const updateLectura = {
-      ...currentData,
-      ...changes,
-    };
-    this.lecturas[position] = updateLectura;
-
-    return {
-      msg: 'Lectura actualizada',
-      data: updateLectura,
-    };
+    return lectura;
   }
 }
