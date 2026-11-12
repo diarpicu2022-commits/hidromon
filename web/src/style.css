@@ -74,7 +74,7 @@ body {
 .view { min-height: 0; min-width: 0; }
 .view[hidden] { display: none; }
 .view.inicio { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 18px; }
-.view.historial { overflow-y: auto; display: grid; gap: 18px; align-content: start; padding-bottom: 8px; }
+.view.historial { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-content: start; padding-bottom: 8px; }
 .view.gestionar { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; overflow-y: auto; padding-bottom: 8px; }
 .form-card { position: sticky; top: 0; }
 
