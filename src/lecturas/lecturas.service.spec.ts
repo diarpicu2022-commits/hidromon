@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { LecturasService } from './lecturas.service';
 import { Lectura } from './entities/lectura.entity';
+import { Sensor } from '../sensores/entities/sensor.entity';
+import { Alerta } from '../alertas/entities/alerta.entity';
 
 describe('LecturasService', () => {
   let service: LecturasService;
@@ -11,6 +13,8 @@ describe('LecturasService', () => {
       providers: [
         LecturasService,
         { provide: getRepositoryToken(Lectura), useValue: {} },
+        { provide: getRepositoryToken(Sensor), useValue: {} },
+        { provide: getRepositoryToken(Alerta), useValue: {} },
       ],
     }).compile();
 
