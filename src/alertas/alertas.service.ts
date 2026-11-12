@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Alerta } from './alerta.model';
-import { CreateAlertaDto } from './alerta.dto';
+import { CreateAlertaDto, UpdateAlertaDto } from './alerta.dto';
 
 @Injectable()
 export class AlertasService {
+  constructor() {}
 
   private alertas: Alerta[] = [
     { id: '1', lecturaId: '2', zonaId: '1', nivel: 'Baja', mensaje: 'Humedad de suelo bajo el mínimo en Lote Norte', isActive: true },
@@ -20,70 +25,81 @@ export class AlertasService {
     { id: '12', lecturaId: '8', zonaId: '3', nivel: 'Alta', mensaje: 'Humedad ambiental cerca del máximo en Invernadero 1', isActive: true },
     { id: '13', lecturaId: '10', zonaId: '4', nivel: 'Baja', mensaje: 'Humedad ambiental cerca del mínimo en Invernadero 2', isActive: true },
     { id: '14', lecturaId: '12', zonaId: '5', nivel: 'Alta', mensaje: 'Humedad ambiental cerca del máximo en Ladera Oriental', isActive: true },
-    { id: '15', lecturaId: '15', zonaId: '8', nivel: 'Alta', mensaje: 'Humedad de suelo sobre el máximo en Potrero Alto', isActive: true }
+    { id: '15', lecturaId: '15', zonaId: '8', nivel: 'Alta', mensaje: 'Humedad de suelo sobre el máximo en Potrero Alto', isActive: true },
   ];
 
+
   findAll(): Alerta[] {
-    return this.alertas.filter(alerta => alerta.isActive);
+    // logica de negocio
+    return this.alertas.filter((alerta) => alerta.isActive);
   }
 
   findById(id: string): Alerta | undefined {
-    console.log('.:: Alerta ID:', id);
+    console.log('.:: Alerta ID: ', id);
     const alerta = this.alertas.find((alerta) => alerta.id === id);
+    console.log('.:: alerta buscada: ', alerta);
     if (alerta === undefined) {
-      // Simulacion de alerta no encontrada
+      // Simulación de alerta no encontrada, error 404
       throw new NotFoundException(`Alerta con ID ${id} no existe`);
+    }
 
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a la alerta con ID ${id}`);
+    // Simulación para error de permisos
+    if (alerta.id === '1') {
+      throw new ForbiddenException(
+        `No tienes permisos para acceder a la alerta con ID ${id}`,
+      );
     }
     return alerta;
   }
 
-  findByNivel(nivel: string): Alerta[] {
-    const alertas = this.alertas.filter(alerta => alerta.nivel === nivel);
-    if (alertas.length === 0) {
-      //simulacion para el nivel de alerta no existe
+  search(nivel: string): Alerta[] {
+    const data = this.alertas.filter((alerta) => alerta.nivel === nivel);
+    if (data.length === 0) {
       throw new NotFoundException(`Alertas de nivel ${nivel} no existen`);
-
-      // Simulacion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a las alertas de nivel ${nivel}`);
     }
-    return alertas;
+    return data;
   }
 
-  create(alertaPayLoad: CreateAlertaDto): Alerta {
-    const newAlerta: Alerta = {
-      ...alertaPayLoad,
+  create(alertaPayload: CreateAlertaDto) {
+    const newAlerta = {
+      ...alertaPayload,
       id: `${new Date().getTime()}`,
-      isActive: true
+      isActive: true,
     };
     this.alertas.push(newAlerta);
-    return newAlerta;
+
+    return {
+      message: 'Alerta creada correctamente',
+      data: alertaPayload,
+    };
   }
 
   delete(id: string) {
-    const position = this.findPosition(id);
-    this.alertas.splice(position, 1);
-    return { msg: `Alerta eliminada correctamente` };
-  }
-
-  update(id: string, changes: CreateAlertaDto) {
-    const position = this.findPosition(id);
-    const updatedAlerta = { ...this.alertas[position], ...changes };
-    this.alertas[position] = updatedAlerta;
-    return updatedAlerta;
-  }
-
-  private findPosition(id: string): number {
     const position = this.alertas.findIndex((alerta) => alerta.id === id);
     if (position === -1) {
-      // Simulacion de alerta no encontrada
       throw new NotFoundException(`Alerta con ID ${id} no existe`);
-
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para modificar la alerta con ID ${id}`);
     }
-    return position;
+    this.alertas.splice(position, 1);
+    return {
+      msg: 'Alerta eliminada correctamente',
+    };
+  }
+
+  update(id: string, changes: UpdateAlertaDto) {
+    const position = this.alertas.findIndex((alerta) => alerta.id === id);
+    if (position === -1) {
+      throw new NotFoundException(`Alerta con ID ${id} no existe`);
+    }
+    const currentData = this.alertas[position];
+    const updateAlerta = {
+      ...currentData,
+      ...changes,
+    };
+    this.alertas[position] = updateAlerta;
+
+    return {
+      msg: 'Alerta actualizada',
+      data: updateAlerta,
+    };
   }
 }
