@@ -16,6 +16,12 @@ export class Alerta {
     @Column({ type: "text" })
     mensaje: string;
 
+    @Column({ type: "boolean", default: false })
+    resuelta: boolean;
+
+    @Column({ type: "timestamptz", nullable: true, name: "resuelta_at" })
+    resueltaAt: Date | null;
+
     @CreateDateColumn(
         {
             type: "timestamptz",
