@@ -82,14 +82,16 @@ body {
 .stage { position: relative; padding: 0; overflow: hidden; min-height: 420px; }
 #scene { position: absolute; inset: 0; }
 #scene canvas { display: block; }
-.labels { position: absolute; inset: 0; }
+.labels { position: absolute; inset: 0; z-index: 1; } /* contexto propio: las etiquetas 3D quedan por debajo del detalle */
 .legend-chip {
+  z-index: 10;
   position: absolute; left: 14px; top: 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 12px;
   background: rgba(255, 255, 255, 0.92); border-radius: 12px; box-shadow: var(--shadow); font-size: 12.5px; max-width: calc(100% - 28px);
 }
 .legend-chip span { display: inline-flex; align-items: center; gap: 6px; }
 .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
 .stage-hint {
+  z-index: 2;
   position: absolute; left: 0; right: 0; bottom: 10px; margin: 0; text-align: center; color: var(--muted);
   font-size: 12px; pointer-events: none;
 }
@@ -110,6 +112,7 @@ body {
 
 /* detalle de selección */
 #detail {
+  z-index: 10;
   position: absolute; right: 14px; top: 14px; width: 250px; max-height: calc(100% - 28px); overflow-y: auto;
   background: rgba(255, 255, 255, 0.97); border-radius: 16px; box-shadow: var(--shadow); padding: 16px;
 }
