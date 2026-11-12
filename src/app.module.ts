@@ -3,11 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Env } from './env.model';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { SensoresModule } from './sensores/sensores.module';
 import { LecturasModule } from './lecturas/lecturas.module';
 import { AlertasModule } from './alertas/alertas.module';
-import { SensoresController } from './sensores/sensores.controller';
 import { ZonasController } from './zonas/zonas.controller';
-import { SensoresService } from './sensores/sensores.service';
 import { ZonasService } from './zonas/zonas.service';
 
 @Module({
@@ -30,10 +29,11 @@ import { ZonasService } from './zonas/zonas.service';
       inject: [ConfigService],
     }),
     UsuariosModule,
+    SensoresModule,
     LecturasModule,
     AlertasModule,
   ],
-  controllers: [SensoresController, ZonasController],
-  providers: [SensoresService, ZonasService],
+  controllers: [ZonasController],
+  providers: [ZonasService],
 })
 export class AppModule {}

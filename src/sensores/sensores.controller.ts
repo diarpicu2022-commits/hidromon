@@ -1,54 +1,46 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { CreateSensorDto } from './sensor.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { CreateSensorDto, UpdateSensorDto } from './sensor.dto';
 import { SensoresService } from './sensores.service';
 
 @Controller('sensores')
 export class SensoresController {
+  constructor(private sensoresService: SensoresService) {}
 
-    constructor(private readonly sensoresService: SensoresService) {}
+  @Get('')
+  getAllSensores() {
+    return this.sensoresService.findAll();
+  }
 
-    @Get()
-    getSensores() {
-        return this.sensoresService.findAll();
-    }
+  @Get(':id')
+  getSensorById(@Param('id') id: string) {
+    return this.sensoresService.findById(id);
+  }
 
-    @Get('id/:id')
-    getSensorById(@Param('id') id: string) {
-        console.log('ID recibido:', id);
-        const sensor = this.sensoresService.findById(id);
-        console.log('Sensor encontrado:', sensor);
-        return sensor;
-    }
+  @Get('search/:tipo')
+  getSensoresByTipo(@Param('tipo') tipo: string) {
+    return this.sensoresService.search(tipo);
+  }
 
-    @Get('tipo/:tipo')
-    getSensoresByTipo(@Param('tipo') tipo: string) {
-        console.log('Tipo recibido:', tipo);
-        const sensores = this.sensoresService.findByTipo(tipo);
-        console.log('Sensores encontrados:', sensores);
-        return sensores;
-    }
+  @Post()
+  createSensor(@Body() sensorPayload: CreateSensorDto) {
+    return this.sensoresService.create(sensorPayload);
+  }
 
-    @Post()
-    createSensor(@Body() sensorPayLoad: CreateSensorDto) {
-        console.log('.:: sensor: ', sensorPayLoad);
-        return this.sensoresService.create(sensorPayLoad);
-    }
+  @Delete(':id')
+  deleteSensor(@Param('id') id: string) {
+    return this.sensoresService.delete(id);
+  }
 
-    @Delete(':id')
-    deleteSensor(@Param('id') id: string) {
-        this.sensoresService.delete(id);
-        return {
-            msg: "Sensor eliminado correctamente"
-        }
-    }
-
-    @Put(':id')
-    updateSensor(@Param('id') id: string, @Body() changes: CreateSensorDto) {
-        const updatedSensor = this.sensoresService.update(id, changes);
-        return {
-            msg: "Sensor actualizado correctamente",
-            data: updatedSensor
-        }
-    }
-
+  @Put(':id')
+  updateSensor(@Param('id') id: string, @Body() changes: UpdateSensorDto) {
+    return this.sensoresService.update(id, changes);
+  }
 }
