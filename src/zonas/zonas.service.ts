@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Zona } from './zona.model';
-import { CreateZonaDto } from './zona.dto';
+import { CreateZonaDto, UpdateZonaDto } from './zona.dto';
 
 @Injectable()
 export class ZonasService {
+  constructor() {}
 
   private zonas: Zona[] = [
     { id: '1', nombre: 'Lote Norte', cultivo: 'Papa', humedadMin: 60, humedadMax: 80, isActive: true },
@@ -20,70 +25,81 @@ export class ZonasService {
     { id: '12', nombre: 'Invernadero 3', cultivo: 'Fresa', humedadMin: 70, humedadMax: 85, isActive: true },
     { id: '13', nombre: 'Terraza Baja', cultivo: 'Plátano', humedadMin: 65, humedadMax: 85, isActive: true },
     { id: '14', nombre: 'Lote Camino', cultivo: 'Zanahoria', humedadMin: 60, humedadMax: 80, isActive: true },
-    { id: '15', nombre: 'Huerta Escolar', cultivo: 'Lechuga', humedadMin: 70, humedadMax: 90, isActive: true }
+    { id: '15', nombre: 'Huerta Escolar', cultivo: 'Lechuga', humedadMin: 70, humedadMax: 90, isActive: true },
   ];
 
+
   findAll(): Zona[] {
-    return this.zonas.filter(zona => zona.isActive);
+    // logica de negocio
+    return this.zonas.filter((zona) => zona.isActive);
   }
 
   findById(id: string): Zona | undefined {
-    console.log('.:: Zona ID:', id);
+    console.log('.:: Zona ID: ', id);
     const zona = this.zonas.find((zona) => zona.id === id);
+    console.log('.:: zona buscada: ', zona);
     if (zona === undefined) {
-      // Simulacion de zona no encontrada
+      // Simulación de zona no encontrada, error 404
       throw new NotFoundException(`Zona con ID ${id} no existe`);
+    }
 
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a la zona con ID ${id}`);
+    // Simulación para error de permisos
+    if (zona.id === '1') {
+      throw new ForbiddenException(
+        `No tienes permisos para acceder a la zona con ID ${id}`,
+      );
     }
     return zona;
   }
 
-  findByCultivo(cultivo: string): Zona[] {
-    const zonas = this.zonas.filter(zona => zona.cultivo === cultivo);
-    if (zonas.length === 0) {
-      //simulacion para el cultivo no existe
+  search(cultivo: string): Zona[] {
+    const data = this.zonas.filter((zona) => zona.cultivo === cultivo);
+    if (data.length === 0) {
       throw new NotFoundException(`Zonas con cultivo ${cultivo} no existen`);
-
-      // Simulacion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a las zonas con cultivo ${cultivo}`);
     }
-    return zonas;
+    return data;
   }
 
-  create(zonaPayLoad: CreateZonaDto): Zona {
-    const newZona: Zona = {
-      ...zonaPayLoad,
+  create(zonaPayload: CreateZonaDto) {
+    const newZona = {
+      ...zonaPayload,
       id: `${new Date().getTime()}`,
-      isActive: true
+      isActive: true,
     };
     this.zonas.push(newZona);
-    return newZona;
+
+    return {
+      message: 'Zona creada correctamente',
+      data: zonaPayload,
+    };
   }
 
   delete(id: string) {
-    const position = this.findPosition(id);
-    this.zonas.splice(position, 1);
-    return { msg: `Zona eliminada correctamente` };
-  }
-
-  update(id: string, changes: CreateZonaDto) {
-    const position = this.findPosition(id);
-    const updatedZona = { ...this.zonas[position], ...changes };
-    this.zonas[position] = updatedZona;
-    return updatedZona;
-  }
-
-  private findPosition(id: string): number {
     const position = this.zonas.findIndex((zona) => zona.id === id);
     if (position === -1) {
-      // Simulacion de zona no encontrada
       throw new NotFoundException(`Zona con ID ${id} no existe`);
-
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para modificar la zona con ID ${id}`);
     }
-    return position;
+    this.zonas.splice(position, 1);
+    return {
+      msg: 'Zona eliminada correctamente',
+    };
+  }
+
+  update(id: string, changes: UpdateZonaDto) {
+    const position = this.zonas.findIndex((zona) => zona.id === id);
+    if (position === -1) {
+      throw new NotFoundException(`Zona con ID ${id} no existe`);
+    }
+    const currentData = this.zonas[position];
+    const updateZona = {
+      ...currentData,
+      ...changes,
+    };
+    this.zonas[position] = updateZona;
+
+    return {
+      msg: 'Zona actualizada',
+      data: updateZona,
+    };
   }
 }
