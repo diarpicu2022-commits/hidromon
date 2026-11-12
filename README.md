@@ -157,13 +157,15 @@ La API queda en `http://localhost:3000`. Para usar otro puerto: `PORT=4000 npm r
 
 ## 🌱 Interfaz 3D (Three.js)
 
-En `web/` hay un invernadero 3D que consume la API y sirve para ver cómo funciona todo junto.
-Cada **zona** es una parcela; el nivel de agua es el promedio de la última lectura de sus sensores,
-y los marcos blanco y amarillo son su humedad mínima y máxima. Los **sensores** cambian de color
-según su última lectura (verde dentro del rango, azul por debajo, rojo por encima, gris sin datos)
-y las **alertas** aparecen como un cono sobre la zona. Haz clic en una zona o sensor para ver su detalle.
-Desde el panel de la izquierda se pueden crear zonas, sensores, lecturas y alertas, y un sensor
-seleccionado puede enviar una lectura aleatoria (si sale del rango se crea la alerta sola).
+En `web/` hay un tablero con un invernadero 3D que consume la API y sirve para ver cómo funciona todo junto.
+
+- **Inicio:** cada **zona** es una jardinera con su medidor de humedad (marca blanca = mínimo, amarilla = máximo);
+  los **sensores** cambian de color según su última lectura (verde dentro del rango, azul por debajo, rojo por encima,
+  gris sin datos) y las **alertas** aparecen como un cono sobre la zona. Clic en una zona o sensor para ver su detalle
+  y enviar una lectura aleatoria (si sale del rango se crea la alerta sola). A la derecha hay tarjetas de datos en
+  tiempo real, la gráfica de evolución de la humedad (24 h, 7 d y 30 d) y el estado del sistema.
+- **Historial:** últimas lecturas y alertas.
+- **Crear datos:** formularios para crear zonas, sensores, lecturas y alertas.
 
 ```bash
 # con la API corriendo en el puerto 3000
