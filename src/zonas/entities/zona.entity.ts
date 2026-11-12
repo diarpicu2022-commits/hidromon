@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Sensor } from "../../sensores/entities/sensor.entity";
+import { Alerta } from "../../alertas/entities/alerta.entity";
 
 @Entity({
     name: "zonas",
@@ -39,4 +40,7 @@ export class Zona {
 
     @OneToMany(() => Sensor, (sensor) => sensor.zona)
     sensores: Sensor[];
+
+    @OneToMany(() => Alerta, (alerta) => alerta.zona)
+    alertas: Alerta[];
 }
