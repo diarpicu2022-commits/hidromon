@@ -4,10 +4,11 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
 } from '@nestjs/common';
-import { CreateAlertaDto, UpdateAlertaDto } from './alerta.dto';
+import { CreateAlertaDto, UpdateAlertaDto } from './dtos/alerta.dto';
 import { AlertasService } from './alertas.service';
 
 @Controller('alertas')
@@ -20,7 +21,7 @@ export class AlertasController {
   }
 
   @Get(':id')
-  getAlertaById(@Param('id') id: string) {
+  getAlertaById(@Param('id', ParseIntPipe) id: number) {
     return this.alertasService.findById(id);
   }
 
@@ -35,12 +36,12 @@ export class AlertasController {
   }
 
   @Delete(':id')
-  deleteAlerta(@Param('id') id: string) {
+  deleteAlerta(@Param('id', ParseIntPipe) id: number) {
     return this.alertasService.delete(id);
   }
 
   @Put(':id')
-  updateAlerta(@Param('id') id: string, @Body() changes: UpdateAlertaDto) {
+  updateAlerta(@Param('id', ParseIntPipe) id: number, @Body() changes: UpdateAlertaDto) {
     return this.alertasService.update(id, changes);
   }
 }
