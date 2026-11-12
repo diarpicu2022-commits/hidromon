@@ -16,8 +16,9 @@ export class AlertasService {
     private alertaRepository: Repository<Alerta>,
   ) {}
 
-  async findAll() {
+  async findAll(resuelta?: boolean) {
     const alertas = await this.alertaRepository.find({
+      where: resuelta === undefined ? {} : { resuelta },
       relations: { lectura: true, zona: true },
       order: { createdAt: 'DESC' },
     });
@@ -102,6 +103,23 @@ export class AlertasService {
         'Error al actualizar la alerta: revisa que la lectura y la zona existan',
       );
     }
+  }
+
+  async resolve(id: number) {
+    const alerta = await this.findOne(id);
+    if (alerta.resuelta) {
+      return {
+        message: 'La alerta ya estaba resuelta',
+        data: alerta,
+      };
+    }
+    alerta.resuelta = true;
+    alerta.resueltaAt = new Date();
+    const savedAlerta = await this.alertaRepository.save(alerta);
+    return {
+      message: 'Alerta resuelta correctamente',
+      data: savedAlerta,
+    };
   }
 
   private async findOne(id: number) {

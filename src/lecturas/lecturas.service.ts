@@ -9,12 +9,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateLecturaDto, UpdateLecturaDto } from './dtos/lectura.dto';
 import { Lectura } from './entities/lectura.entity';
+import { Sensor } from '../sensores/entities/sensor.entity';
+import { Alerta } from '../alertas/entities/alerta.entity';
 
 @Injectable()
 export class LecturasService {
   constructor(
     @InjectRepository(Lectura)
     private lecturaRepository: Repository<Lectura>,
+    @InjectRepository(Sensor)
+    private sensorRepository: Repository<Sensor>,
+    @InjectRepository(Alerta)
+    private alertaRepository: Repository<Alerta>,
   ) {}
 
   async findAll() {
@@ -56,21 +62,76 @@ export class LecturasService {
   }
 
   async create(lecturaPayload: CreateLecturaDto) {
+    const { sensorId, ...fields } = lecturaPayload;
+    const sensor = await this.sensorRepository.findOne({
+      where: { id: sensorId },
+      relations: { zona: true },
+    });
+    if (!sensor) {
+      throw new BadRequestException(
+        'Error al crear la lectura: revisa que el sensor exista',
+      );
+    }
+
+    let newLectura: Lectura;
     try {
-      const { sensorId, ...fields } = lecturaPayload;
-      const newLectura = await this.lecturaRepository.save({
+      newLectura = await this.lecturaRepository.save({
         ...fields,
         sensor: { id: sensorId },
       });
-      return {
-        message: 'Lectura creada correctamente',
-        data: newLectura,
-      };
     } catch {
       throw new BadRequestException(
         'Error al crear la lectura: revisa que el sensor exista',
       );
     }
+
+    const { alerta, resueltas } = await this.evaluarAlertas(newLectura, sensor);
+    return {
+      message: 'Lectura creada correctamente',
+      data: newLectura,
+      alerta,
+      alertasResueltas: resueltas,
+    };
+  }
+
+  // Si la lectura sale del rango de la zona se abre una alerta (Alta o Baja);
+  // si vuelve al rango, se resuelven las alertas abiertas de ese sensor.
+  private async evaluarAlertas(lectura: Lectura, sensor: Sensor) {
+    const { zona } = sensor;
+    const nivel =
+      lectura.valor > zona.humedadMax
+        ? 'Alta'
+        : lectura.valor < zona.humedadMin
+          ? 'Baja'
+          : null;
+
+    const abiertas = await this.alertaRepository.find({
+      where: { resuelta: false, lectura: { sensor: { id: sensor.id } } },
+    });
+    const aResolver = abiertas.filter((a) => a.nivel !== nivel);
+    if (aResolver.length > 0) {
+      const ahora = new Date();
+      await this.alertaRepository.save(
+        aResolver.map((a) => ({ ...a, resuelta: true, resueltaAt: ahora })),
+      );
+    }
+
+    // En rango, o ya hay una alerta abierta del mismo nivel: no se duplica.
+    if (nivel === null || abiertas.some((a) => a.nivel === nivel)) {
+      return { alerta: null, resueltas: aResolver.length };
+    }
+
+    const motivo =
+      nivel === 'Alta'
+        ? `por encima del máximo de ${zona.humedadMax}%`
+        : `por debajo del mínimo de ${zona.humedadMin}%`;
+    const alerta = await this.alertaRepository.save({
+      nivel,
+      mensaje: `Sensor ${sensor.codigo}: humedad ${lectura.valor}% ${motivo}`,
+      lectura: { id: lectura.id },
+      zona: { id: zona.id },
+    });
+    return { alerta, resueltas: aResolver.length };
   }
 
   async delete(id: number) {
