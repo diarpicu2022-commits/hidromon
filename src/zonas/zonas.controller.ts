@@ -4,10 +4,11 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
 } from '@nestjs/common';
-import { CreateZonaDto, UpdateZonaDto } from './zona.dto';
+import { CreateZonaDto, UpdateZonaDto } from './dtos/zona.dto';
 import { ZonasService } from './zonas.service';
 
 @Controller('zonas')
@@ -20,7 +21,7 @@ export class ZonasController {
   }
 
   @Get(':id')
-  getZonaById(@Param('id') id: string) {
+  getZonaById(@Param('id', ParseIntPipe) id: number) {
     return this.zonasService.findById(id);
   }
 
@@ -35,12 +36,12 @@ export class ZonasController {
   }
 
   @Delete(':id')
-  deleteZona(@Param('id') id: string) {
+  deleteZona(@Param('id', ParseIntPipe) id: number) {
     return this.zonasService.delete(id);
   }
 
   @Put(':id')
-  updateZona(@Param('id') id: string, @Body() changes: UpdateZonaDto) {
+  updateZona(@Param('id', ParseIntPipe) id: number, @Body() changes: UpdateZonaDto) {
     return this.zonasService.update(id, changes);
   }
 }
