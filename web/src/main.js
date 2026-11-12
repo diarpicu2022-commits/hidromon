@@ -8,7 +8,7 @@ const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const ETIQUETA = { ok: 'Óptima', bajo: 'Baja', alto: 'Alta', sin: 'Sin datos' };
 const NIVEL_ESTADO = { Alta: 'alto', Baja: 'bajo', Media: 'warn' };
 
-let raw = { zonas: [], sensores: [], lecturas: [], alertas: [], usuarios: [] };
+let raw = { zonas: [], sensores: [], lecturas: [], alertas: [], usuarios: [], cultivos: [] };
 let zonas = [];
 let selected = null; // { type, id } en la escena
 let tab = 'zona'; // recurso que se gestiona
@@ -389,10 +389,11 @@ const RES = {
     lista: () => raw.zonas,
     cabeceras: ['ID', 'Nombre', 'Cultivo', 'Rango', 'Responsable'],
     celdas: (z) => [z.id, z.nombre, z.cultivo, z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
-    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '' }),
+    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '', cultivoIds: (z.cultivos ?? []).map((c) => c.id) }),
     campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
-      { name: 'cultivo', label: 'Cultivo', type: 'text', required: true },
+      { name: 'cultivo', label: 'Cultivo principal', type: 'text', required: true },
+      { name: 'cultivoIds', label: 'Cultivos sembrados', type: 'multi', hint: 'Marca todos los que apliquen', options: raw.cultivos.map((c) => [c.id, c.nombre]) },
       { name: 'humedadMin', label: 'Humedad mínima (%)', type: 'number', required: true, value: 60 },
       { name: 'humedadMax', label: 'Humedad máxima (%)', type: 'number', required: true, value: 80 },
       { name: 'usuarioId', label: 'Responsable (opcional)', type: 'select', options: [['', 'Sin responsable'], ...raw.usuarios.map((u) => [u.id, u.nombre + ' · ' + u.rol])] },
@@ -509,13 +510,46 @@ $('btn-nuevo').onclick = () => {
   $('form').querySelector('input, select')?.focus();
 };
 
+// Grupo de casillas con forma de píldora (anexo docs/ux/anexos/2026-11-12-web-cultivos.md).
+function multiField(f, marcados) {
+  const set = new Set(marcados.map(Number));
+  const fs = el('fieldset', { className: 'multi' }, el('legend', { textContent: f.label }));
+  if (!f.options.length) {
+    const ir = el('button', { type: 'button', className: 'link', textContent: 'Ir a Cultivos' });
+    ir.onclick = () => {
+      tab = 'cultivo';
+      editing = null;
+      renderTabs();
+      renderGestion();
+      renderForm(false);
+    };
+    fs.append(el('p', { className: 'multi-empty' }, 'Aún no hay cultivos. Créalos en la pestaña Cultivos. ', ...(RES.cultivo ? [ir] : [])));
+    return fs;
+  }
+  fs.append(el('p', { className: 'multi-hint', textContent: f.hint }));
+  const choices = el('div', { className: 'choices' });
+  f.options.forEach(([v, text]) => {
+    const input = el('input', { type: 'checkbox', name: f.name, value: v, checked: set.has(Number(v)) });
+    choices.append(el('label', { className: 'choice' }, input, el('span', { textContent: text })));
+  });
+  fs.append(choices);
+  return fs;
+}
+
 // Conserva lo que el usuario ya escribió cuando el refresco automático redibuja el formulario.
 function renderForm(keepValues = false) {
   const form = $('form');
   const def = RES[tab];
   const item = editing ? def.lista().find((r) => r.id === editing.id) : null;
   const inicial = item ? def.valores(item) : {};
-  const kept = keepValues ? Object.fromEntries(new FormData(form)) : {};
+  const kept = {};
+  if (keepValues) {
+    const data = new FormData(form);
+    def.campos().forEach((f) => {
+      if (f.type === 'multi') kept[f.name] = data.getAll(f.name).map(Number);
+      else if (data.has(f.name)) kept[f.name] = data.get(f.name);
+    });
+  }
 
   $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : 'Nueva ' + def.title.toLowerCase();
   $('form-hint').textContent = def.hint;
@@ -525,6 +559,8 @@ function renderForm(keepValues = false) {
     if (f.type === 'select') {
       input = el('select', { name: f.name });
       f.options.forEach(([v, text]) => input.append(el('option', { value: v, textContent: text })));
+    } else if (f.type === 'multi') {
+      return multiField(f, kept[f.name] ?? inicial[f.name] ?? []);
     } else if (f.type === 'check') {
       input = el('input', { name: f.name, type: 'checkbox', checked: f.value });
       return el('label', { className: 'check' }, input, f.label);
@@ -557,6 +593,10 @@ $('form').addEventListener('submit', async (e) => {
   const payload = {};
   for (const f of def.campos()) {
     if (f.type === 'check') continue;
+    if (f.type === 'multi') {
+      if (f.options.length) payload[f.name] = data.getAll(f.name).map(Number);
+      continue;
+    }
     const v = data.get(f.name);
     const numeric = f.type === 'number' || (f.type === 'select' && f.name.endsWith('Id'));
     const valor = numeric ? (v === '' ? null : Number(v)) : v;
