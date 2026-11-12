@@ -40,6 +40,7 @@ erDiagram
     SENSOR ||--o{ LECTURA : registra
     LECTURA ||--o{ ALERTA : genera
     ZONA ||--o{ ALERTA : recibe
+    ZONA }o--o{ CULTIVO : siembra
 ```
 
 | Entidad | Campos | Qué representa |
@@ -47,7 +48,8 @@ erDiagram
 | **Usuario** | `nombre`, `email`, `rol`, `perfil` | Agricultor o administrador que consulta el sistema |
 | **Perfil** | `municipio`, `finca`, `nickname`, `avatar` | Datos del usuario (relación 1 a 1) |
 | **Sensor** | `codigo`, `tipo`, `zonaId` | Dispositivo IoT de humedad de `Suelo` o `Ambiental` |
-| **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax`, `usuarioId` (opcional) | Área de cultivo con sus umbrales y un usuario responsable |
+| **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax`, `usuarioId` (opcional), `cultivoIds` (opcional) | Área de cultivo con sus umbrales, un usuario responsable y los cultivos sembrados |
+| **Cultivo** | `nombre` (único), `descripcion` (opcional) | Catálogo de cultivos. Una zona tiene varios cultivos y un cultivo está en varias zonas (relación muchos a muchos en la tabla `zonas_cultivos`) |
 | **Lectura** | `sensorId`, `valor`, `fecha` | Una medición tomada por un sensor |
 | **Alerta** | `lecturaId`, `zonaId`, `nivel`, `mensaje`, `resuelta` | Aviso de que una lectura quedó por encima (`Alta`) o por debajo (`Baja`) del rango |
 
@@ -80,6 +82,26 @@ Y cada uno trae una búsqueda propia:
 | `zonas` | `GET /zonas/search/:cultivo` | `/zonas/search/Papa` |
 | `lecturas` | `GET /lecturas/search/:sensorId` | `/lecturas/search/1` |
 | `alertas` | `GET /alertas/search/:nivel` | `/alertas/search/Alta` |
+
+### Cultivos y la relación muchos a muchos
+
+`cultivos` se generó con `nest g res cultivos` (CRUD automático de la Clase 8) y después se pasó al
+patrón del proyecto con repositorio, `dtos/` y `ParseIntPipe`. Tiene `GET`, `GET /:id`, `POST`, `PUT /:id`
+y `DELETE /:id`, sin búsqueda propia ni el 403 simulado del id 1.
+
+La zona es el lado dueño de la relación (`@ManyToMany` con `@JoinTable`), así que los cultivos se
+asignan desde la zona:
+
+```bash
+curl -X POST http://localhost:3000/cultivos -H "Content-Type: application/json" -d '{"nombre":"Tomate"}'
+curl -X POST http://localhost:3000/zonas -H "Content-Type: application/json" -d '{"nombre":"Invernadero A","cultivo":"Tomate","humedadMin":40,"humedadMax":70,"cultivoIds":[1]}'
+```
+
+- `GET /zonas` y `GET /zonas/:id` traen `cultivos`, y `GET /cultivos/:id` trae las `zonas` donde está.
+- `PUT /zonas/:id` con `cultivoIds` reemplaza la lista completa. Si no se manda, la lista no cambia.
+- Un id de cultivo que no existe responde 400 con los ids que faltan. Un nombre repetido responde 409.
+- Borrar un cultivo lo quita de las zonas que lo tenían, pero las zonas siguen existiendo.
+- El campo de texto `cultivo` de la zona se mantiene porque lo usan la búsqueda y la interfaz 3D.
 
 ### Alertas automáticas
 
@@ -206,6 +228,7 @@ src/
 │   └── *.spec.ts          # pruebas
 ├── sensores/              # misma estructura (entities/, dtos/, módulo)
 ├── zonas/
+├── cultivos/             # generado con nest g res, ManyToMany con zonas
 ├── lecturas/
 └── alertas/
 ```
