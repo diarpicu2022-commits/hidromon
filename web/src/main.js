@@ -5,11 +5,13 @@ import { createScene } from './scene.js';
 const $ = (id) => document.getElementById(id);
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const ETIQUETA = { ok: 'Óptima', bajo: 'Baja', alto: 'Alta', sin: 'Sin datos' };
+const NIVEL_ESTADO = { Alta: 'alto', Baja: 'bajo', Media: 'warn' };
 
 let raw = { zonas: [], sensores: [], lecturas: [], alertas: [] };
 let zonas = [];
-let selected = null; // { type, id }
-let tab = 'zona';
+let selected = null; // { type, id } en la escena
+let tab = 'zona'; // recurso que se gestiona
+let editing = null; // { id } del registro que se edita, o null si se crea
 let view = 'inicio';
 let online = null;
 let lastUpdate = null;
@@ -37,7 +39,7 @@ function toast(text, kind = 'ok') {
   t.textContent = text;
   t.className = 'show ' + kind;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.className = ''), 3500);
+  toastTimer = setTimeout(() => (t.className = ''), 4000);
 }
 
 function hace(date) {
@@ -52,13 +54,17 @@ function badge(estado, texto) {
   return el('span', { className: 'badge ' + estado, textContent: texto ?? ETIQUETA[estado] });
 }
 
+const fecha = (d) => new Date(d).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
 // ---------- navegación y reloj ----------
+function setView(v) {
+  view = v;
+  document.querySelectorAll('#nav button').forEach((x) => x.classList.toggle('active', x.dataset.view === v));
+  ['inicio', 'historial', 'crear'].forEach((n) => ($('view-' + n).hidden = n !== v));
+}
 $('nav').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-view]');
-  if (!b) return;
-  view = b.dataset.view;
-  document.querySelectorAll('#nav button').forEach((x) => x.classList.toggle('active', x === b));
-  ['inicio', 'historial', 'crear'].forEach((v) => ($('view-' + v).hidden = v !== view));
+  if (b) setView(b.dataset.view);
 });
 
 function tick() {
@@ -77,6 +83,14 @@ async function refresh() {
     zonas = buildWorld(raw);
     online = true;
     lastUpdate = Date.now();
+    // Si lo seleccionado ya no existe (por ejemplo, se eliminó), se limpia la selección.
+    const existe = selected && (selected.type === 'zona' ? zonas.some((z) => z.id === selected.id) : zonas.some((z) => z.sensores.some((s) => s.id === selected.id)));
+    if (selected && !existe) {
+      selected = null;
+      sceneApi.setSelected(null);
+    }
+    // Lo mismo con el registro que se estaba editando.
+    if (editing && !listaDe(tab).some((r) => r.id === editing.id)) editing = null;
     sceneApi.update(zonas);
     renderAll();
   } catch (err) {
@@ -94,6 +108,8 @@ function renderAll() {
   renderSystem();
   renderDetail();
   renderTables();
+  renderTabs();
+  renderGestion();
   if (!$('form').contains(document.activeElement)) renderForm(true);
   $('empty').hidden = zonas.length > 0;
   tick();
@@ -112,11 +128,12 @@ function renderLegend() {
 }
 
 // ---------- tarjetas ----------
-function kpi(icon, label, value, extra, bar) {
+function kpi(icon, label, value, extra, bar, sub) {
   const v = el('div', { className: 'value' }, value);
   if (extra) v.append(extra);
   const box = el('div', { className: 'kpi' }, el('div', { className: 'label', textContent: icon + ' ' + label }), v);
   if (bar !== undefined) box.append(el('div', { className: 'bar' }, el('i', { style: 'width:' + Math.max(0, Math.min(100, bar)) + '%' })));
+  if (sub) box.append(el('div', { className: 'label', textContent: sub }));
   return box;
 }
 
@@ -138,14 +155,14 @@ function renderKpis() {
     else [estado, texto] = ['warn', 'Atención'];
   }
 
-  const graves = [...raw.alertas].sort((a, b) => ({ Alta: 3, Media: 2, Baja: 1 }[b.nivel] ?? 0) - ({ Alta: 3, Media: 2, Baja: 1 }[a.nivel] ?? 0));
-  const nivelAlerta = graves[0]?.nivel;
+  // Alertas activas = sensores cuya última lectura está fuera de rango ahora mismo
+  const activas = bajos + altos;
   const cultivos = new Set(raw.zonas.map((z) => z.cultivo)).size;
 
   $('kpis').replaceChildren(
     kpi('💧', 'Humedad promedio', prom === null ? '–' : prom.toFixed(0) + ' %', badge(estado, texto), prom ?? 0),
     kpi('📡', 'Sensores en rango', enRango + '/' + todos.length, undefined, todos.length ? (enRango / todos.length) * 100 : 0),
-    kpi('🚨', 'Alertas', String(raw.alertas.length), nivelAlerta ? badge(nivelAlerta === 'Alta' ? 'alto' : nivelAlerta === 'Baja' ? 'bajo' : 'warn', nivelAlerta) : badge('ok', 'Sin alertas')),
+    kpi('🚨', 'Alertas activas', String(activas), activas ? badge(altos ? 'alto' : 'bajo', altos ? 'Alta' : 'Baja') : badge('ok', 'Todo en rango'), undefined, raw.alertas.length + ' en el historial'),
     kpi('🌱', 'Zonas', String(raw.zonas.length), el('small', { textContent: cultivos + (cultivos === 1 ? ' cultivo' : ' cultivos') })),
   );
 }
@@ -153,25 +170,70 @@ function renderKpis() {
 // ---------- estado del sistema ----------
 function renderSystem() {
   const sensoresConDatos = zonas.flatMap((z) => z.sensores).filter((s) => s.ultima).length;
+  const activas = zonas.reduce((n, z) => n + (z.alertaActual?.count ?? 0), 0);
   const filas = [
     ['🌐 Conexión API (HidroMon)', online ? 'Conectado' : 'Sin conexión', online ? 'ok' : 'alto'],
     ['🗄️ Base de datos (Postgres)', online ? 'OK' : 'Sin respuesta', online ? 'ok' : 'alto'],
     ['📡 Sensores con lecturas', sensoresConDatos + ' de ' + raw.sensores.length, sensoresConDatos ? 'ok' : 'sin'],
     ['🌱 Zonas registradas', String(raw.zonas.length), raw.zonas.length ? 'ok' : 'sin'],
-    ['🚨 Alertas', raw.alertas.length ? raw.alertas.length + ' registradas' : 'Ninguna', raw.alertas.length ? 'alto' : 'ok'],
+    ['🚨 Alertas activas', activas ? activas + ' ahora' : 'Ninguna', activas ? 'alto' : 'ok'],
   ];
   const color = { ok: 'var(--green)', alto: 'var(--red)', sin: 'var(--grey)' };
   $('sys').replaceChildren(
-    ...filas.map(([nombre, valor, st]) =>
-      el('li', {}, nombre, el('span', { className: 'st' }, el('i', { style: 'background:' + color[st] }), valor)),
-    ),
+    ...filas.map(([nombre, valor, st]) => el('li', {}, nombre, el('span', { className: 'st' }, el('i', { style: 'background:' + color[st] }), valor))),
   );
   const sb = $('sys-badge');
   sb.className = 'badge ' + (online ? 'ok' : 'alto');
   sb.textContent = online ? 'Funcionando' : 'Sin conexión';
 }
 
-// ---------- panel de detalle ----------
+// ---------- borrar con confirmación en dos pasos (sin ventanas del navegador) ----------
+function deleteButton(recurso, id, nombre, onDone) {
+  const b = el('button', { className: 'mini danger', type: 'button', textContent: 'Eliminar' });
+  let timer;
+  b.onclick = async () => {
+    if (!b.classList.contains('confirm')) {
+      b.classList.add('confirm');
+      b.textContent = '¿Seguro?';
+      timer = setTimeout(() => {
+        b.classList.remove('confirm');
+        b.textContent = 'Eliminar';
+      }, 4000);
+      return;
+    }
+    clearTimeout(timer);
+    b.disabled = true;
+    try {
+      const res = await api.remove(recurso, id);
+      toast(res.message ?? nombre + ' eliminado');
+      onDone?.();
+      await refresh();
+    } catch (err) {
+      toast(err.message, 'error');
+      b.disabled = false;
+      b.classList.remove('confirm');
+      b.textContent = 'Eliminar';
+    }
+  };
+  return b;
+}
+
+function editButton(type, id) {
+  const b = el('button', { className: 'mini', type: 'button', textContent: 'Editar' });
+  b.onclick = () => startEdit(type, id);
+  return b;
+}
+
+function startEdit(type, id) {
+  tab = type;
+  editing = { id };
+  setView('crear');
+  renderTabs();
+  renderGestion();
+  renderForm(false);
+}
+
+// ---------- panel de detalle (escena) ----------
 function row(a, b) {
   return el('tr', {}, el('td', { textContent: a }), el('td', { textContent: b }));
 }
@@ -194,17 +256,23 @@ function renderDetail() {
       row('Rango permitido', z.humedadMin + '% – ' + z.humedadMax + '%'),
       row('Humedad promedio', z.promedio === null ? 'sin lecturas' : z.promedio.toFixed(1) + '%'),
       row('Sensores', z.sensores.length),
-      row('Alertas', z.alertas.length),
+      row('Alertas activas', z.alertaActual ? z.alertaActual.nivel + ' · ' + z.alertaActual.count : 'ninguna'),
+      row('Alertas en el historial', z.alertas.length),
     );
-    box.replaceChildren(close, el('h3', { textContent: z.nombre }), el('div', { className: 'sub' }, 'Zona ', badge(z.estado, ESTADOS[z.estado].label)), table);
-    z.alertas.slice(0, 3).forEach((a) => box.append(el('div', { className: 'alert-line', textContent: '⚠ ' + a.nivel + ': ' + a.mensaje })));
+    box.replaceChildren(
+      close,
+      el('h3', { textContent: z.nombre }),
+      el('div', { className: 'sub' }, 'Zona ', badge(z.estado, ESTADOS[z.estado].label)),
+      table,
+      el('div', { className: 'actions' }, el('div', { className: 'row-actions' }, editButton('zona', z.id), deleteButton('zonas', z.id, 'Zona', () => select(null)))),
+    );
   } else {
     const z = zonas.find((x) => x.sensores.some((s) => s.id === selected.id));
     const s = z?.sensores.find((x) => x.id === selected.id);
     if (!s) return void (box.hidden = true);
     const table = el('table', {});
     table.append(row('Zona', z.nombre), row('Tipo', s.tipo), row('Rango de la zona', z.humedadMin + '% – ' + z.humedadMax + '%'));
-    s.lecturas.slice(0, 5).forEach((l) => table.append(row(new Date(l.fecha).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), l.valor + '%')));
+    s.lecturas.slice(0, 5).forEach((l) => table.append(row(fecha(l.fecha), l.valor + '%')));
     const btn = el('button', { className: 'ghost', textContent: 'Enviar lectura aleatoria' });
     btn.onclick = () => lecturaAleatoria(s, z, btn);
     box.replaceChildren(
@@ -212,7 +280,7 @@ function renderDetail() {
       el('h3', { textContent: s.codigo }),
       el('div', { className: 'sub' }, 'Sensor ', badge(s.estado, ESTADOS[s.estado].label)),
       table,
-      el('div', { className: 'actions' }, btn),
+      el('div', { className: 'actions' }, btn, el('div', { className: 'row-actions' }, editButton('sensor', s.id), deleteButton('sensores', s.id, 'Sensor', () => select(null)))),
     );
   }
   box.hidden = false;
@@ -247,13 +315,18 @@ async function alertaAutomatica(lectura, zona) {
   toast('Lectura fuera de rango: se creó una alerta ' + nivel, 'error');
 }
 
-// ---------- historial ----------
+// ---------- historial (solo lectura) ----------
 function tabla(id, cabeceras, filas) {
-  const t = $(id);
-  t.replaceChildren(
+  $(id).replaceChildren(
     el('thead', {}, el('tr', {}, ...cabeceras.map((c) => el('th', { textContent: c })))),
     el('tbody', {}, ...(filas.length ? filas : [el('tr', {}, el('td', { colSpan: cabeceras.length, textContent: 'Sin registros todavía' }))])),
   );
+}
+
+function estadoLectura(l) {
+  const z = zonas.find((x) => x.sensores.some((s) => s.id === l.sensor?.id));
+  if (!z) return 'sin';
+  return l.valor < z.humedadMin ? 'bajo' : l.valor > z.humedadMax ? 'alto' : 'ok';
 }
 
 function renderTables() {
@@ -264,11 +337,11 @@ function renderTables() {
     ['Fecha', 'Sensor', 'Zona', 'Humedad', 'Estado'],
     raw.lecturas.slice(0, 25).map((l) => {
       const info = sensorInfo.get(l.sensor?.id);
-      const estado = info ? (l.valor < info.z.humedadMin ? 'bajo' : l.valor > info.z.humedadMax ? 'alto' : 'ok') : 'sin';
+      const estado = estadoLectura(l);
       return el(
         'tr',
         {},
-        el('td', { textContent: new Date(l.fecha).toLocaleString('es-CO') }),
+        el('td', { textContent: fecha(l.fecha) }),
         el('td', { textContent: info?.s.codigo ?? '#' + l.sensor?.id }),
         el('td', { textContent: info?.z.nombre ?? '–' }),
         el('td', { textContent: l.valor + '%' }),
@@ -280,24 +353,25 @@ function renderTables() {
     'tbl-alertas',
     ['Fecha', 'Nivel', 'Zona', 'Mensaje'],
     raw.alertas.slice(0, 25).map((a) =>
-      el(
-        'tr',
-        {},
-        el('td', { textContent: new Date(a.createdAt).toLocaleString('es-CO') }),
-        el('td', {}, badge(a.nivel === 'Alta' ? 'alto' : a.nivel === 'Baja' ? 'bajo' : 'warn', a.nivel)),
-        el('td', { textContent: a.zona?.nombre ?? '–' }),
-        el('td', { textContent: a.mensaje }),
-      ),
+      el('tr', {}, el('td', { textContent: fecha(a.createdAt) }), el('td', {}, badge(NIVEL_ESTADO[a.nivel] ?? 'warn', a.nivel)), el('td', { textContent: a.zona?.nombre ?? '–' }), el('td', { textContent: a.mensaje })),
     ),
   );
 }
 
-// ---------- formularios ----------
-const FORMS = {
+// ---------- gestionar: crear, editar y eliminar ----------
+const nombreSensor = (s) => s.codigo + ' · ' + s.tipo;
+
+const RES = {
   zona: {
     title: 'Zona',
+    plural: 'Zonas',
     recurso: 'zonas',
-    fields: () => [
+    hint: 'Una zona es un área de cultivo con su rango de humedad.',
+    lista: () => raw.zonas,
+    cabeceras: ['ID', 'Nombre', 'Cultivo', 'Rango'],
+    celdas: (z) => [z.id, z.nombre, z.cultivo, z.humedadMin + '–' + z.humedadMax + '%'],
+    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax }),
+    campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'cultivo', label: 'Cultivo', type: 'text', required: true },
       { name: 'humedadMin', label: 'Humedad mínima (%)', type: 'number', required: true, value: 60 },
@@ -306,8 +380,14 @@ const FORMS = {
   },
   sensor: {
     title: 'Sensor',
+    plural: 'Sensores',
     recurso: 'sensores',
-    fields: () => [
+    hint: 'Un sensor pertenece a una zona que ya exista.',
+    lista: () => raw.sensores,
+    cabeceras: ['ID', 'Código', 'Tipo', 'Zona'],
+    celdas: (s) => [s.id, s.codigo, s.tipo, s.zona?.nombre ?? '–'],
+    valores: (s) => ({ codigo: s.codigo, tipo: s.tipo, zonaId: s.zona?.id }),
+    campos: () => [
       { name: 'codigo', label: 'Código', type: 'text', required: true },
       { name: 'tipo', label: 'Tipo', type: 'select', options: ['Suelo', 'Ambiental'].map((t) => [t, t]) },
       { name: 'zonaId', label: 'Zona', type: 'select', options: raw.zonas.map((z) => [z.id, z.nombre + ' (' + z.cultivo + ')']) },
@@ -315,45 +395,93 @@ const FORMS = {
   },
   lectura: {
     title: 'Lectura',
+    plural: 'Lecturas',
     recurso: 'lecturas',
-    fields: () => [
-      { name: 'sensorId', label: 'Sensor', type: 'select', options: raw.sensores.map((s) => [s.id, s.codigo + ' · ' + s.tipo]) },
+    hint: 'Una lectura es una medición de humedad de un sensor que ya exista.',
+    lista: () => raw.lecturas,
+    cabeceras: ['ID', 'Fecha', 'Sensor', 'Humedad'],
+    celdas: (l) => [l.id, fecha(l.fecha), raw.sensores.find((s) => s.id === l.sensor?.id)?.codigo ?? '#' + l.sensor?.id, l.valor + '%'],
+    valores: (l) => ({ sensorId: l.sensor?.id, valor: l.valor }),
+    campos: () => [
+      { name: 'sensorId', label: 'Sensor', type: 'select', options: raw.sensores.map((s) => [s.id, nombreSensor(s)]) },
       { name: 'valor', label: 'Valor de humedad (%)', type: 'number', required: true, value: 70 },
-      { name: 'auto', label: 'Crear alerta si sale del rango', type: 'check', value: true },
+      ...(editing ? [] : [{ name: 'auto', label: 'Crear alerta si sale del rango', type: 'check', value: true }]),
     ],
   },
   alerta: {
     title: 'Alerta',
+    plural: 'Alertas',
     recurso: 'alertas',
-    fields: () => [
-      { name: 'lecturaId', label: 'Lectura', type: 'select', options: raw.lecturas.slice(0, 30).map((l) => [l.id, '#' + l.id + ' · ' + (l.sensor?.codigo ?? 'sensor ' + l.sensor?.id) + ' · ' + l.valor + '%']) },
-      { name: 'zonaId', label: 'Zona', type: 'select', options: raw.zonas.map((z) => [z.id, z.nombre]) },
-      { name: 'nivel', label: 'Nivel', type: 'select', options: ['Alta', 'Media', 'Baja'].map((t) => [t, t]) },
-      { name: 'mensaje', label: 'Mensaje', type: 'text', required: true },
-    ],
+    hint: 'Una alerta se asocia a una lectura y a una zona que ya existan.',
+    lista: () => raw.alertas,
+    cabeceras: ['ID', 'Nivel', 'Zona', 'Mensaje'],
+    celdas: (a) => [a.id, a.nivel, a.zona?.nombre ?? '–', a.mensaje],
+    valores: (a) => ({ lecturaId: a.lectura?.id, zonaId: a.zona?.id, nivel: a.nivel, mensaje: a.mensaje }),
+    campos: () => {
+      const actual = editing ? raw.alertas.find((a) => a.id === editing.id)?.lectura : null;
+      const lecturas = raw.lecturas.slice(0, 30);
+      if (actual && !lecturas.some((l) => l.id === actual.id)) lecturas.push(actual);
+      return [
+        { name: 'lecturaId', label: 'Lectura', type: 'select', options: lecturas.map((l) => [l.id, '#' + l.id + ' · ' + l.valor + '%']) },
+        { name: 'zonaId', label: 'Zona', type: 'select', options: raw.zonas.map((z) => [z.id, z.nombre]) },
+        { name: 'nivel', label: 'Nivel', type: 'select', options: ['Alta', 'Media', 'Baja'].map((t) => [t, t]) },
+        { name: 'mensaje', label: 'Mensaje', type: 'text', required: true },
+      ];
+    },
   },
 };
 
+const listaDe = (t) => RES[t].lista();
+
 function renderTabs() {
   $('tabs').replaceChildren(
-    ...Object.entries(FORMS).map(([key, f]) => {
-      const b = el('button', { type: 'button', textContent: f.title, className: key === tab ? 'active' : '' });
+    ...Object.entries(RES).map(([key, r]) => {
+      const b = el('button', { type: 'button', textContent: r.plural + ' (' + r.lista().length + ')', className: key === tab ? 'active' : '' });
       b.onclick = () => {
         tab = key;
+        editing = null;
         renderTabs();
-        renderForm();
+        renderGestion();
+        renderForm(false);
       };
       return b;
     }),
   );
 }
 
+function renderGestion() {
+  const def = RES[tab];
+  const filas = def.lista().slice(0, 100).map((item) => {
+    const tr = el('tr', { className: editing?.id === item.id ? 'editing' : '' });
+    def.celdas(item).forEach((c) => tr.append(el('td', { textContent: c })));
+    tr.append(el('td', {}, el('div', { className: 'row-actions' }, editButton(tab, item.id), deleteButton(def.recurso, item.id, def.title, () => editing?.id === item.id && (editing = null)))));
+    return tr;
+  });
+  $('tbl-gestion').replaceChildren(
+    el('thead', {}, el('tr', {}, ...def.cabeceras.map((c) => el('th', { textContent: c })), el('th', {}))),
+    el('tbody', {}, ...(filas.length ? filas : [el('tr', {}, el('td', { colSpan: def.cabeceras.length + 1, textContent: 'Aún no hay registros. Crea el primero con «Nuevo».' }))])),
+  );
+}
+
+$('btn-nuevo').onclick = () => {
+  editing = null;
+  renderGestion();
+  renderForm(false);
+  $('form').querySelector('input, select')?.focus();
+};
+
 // Conserva lo que el usuario ya escribió cuando el refresco automático redibuja el formulario.
 function renderForm(keepValues = false) {
   const form = $('form');
+  const def = RES[tab];
+  const item = editing ? def.lista().find((r) => r.id === editing.id) : null;
+  const inicial = item ? def.valores(item) : {};
   const kept = keepValues ? Object.fromEntries(new FormData(form)) : {};
-  const def = FORMS[tab];
-  const nodes = def.fields().map((f) => {
+
+  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : 'Nueva ' + def.title.toLowerCase();
+  $('form-hint').textContent = def.hint;
+
+  const nodes = def.campos().map((f) => {
     let input;
     if (f.type === 'select') {
       input = el('select', { name: f.name });
@@ -362,21 +490,33 @@ function renderForm(keepValues = false) {
       input = el('input', { name: f.name, type: 'checkbox', checked: f.value });
       return el('label', { className: 'check' }, input, f.label);
     } else {
-      input = el('input', { name: f.name, type: f.type, required: !!f.required, value: f.value ?? '' });
+      input = el('input', { name: f.name, type: f.type, required: !!f.required });
       if (f.type === 'number') input.step = 'any';
     }
-    if (kept[f.name] !== undefined && (f.type !== 'select' || [...input.options].some((o) => o.value === kept[f.name]))) input.value = kept[f.name];
+    const candidato = kept[f.name] !== undefined ? kept[f.name] : inicial[f.name] !== undefined ? inicial[f.name] : f.value ?? '';
+    if (f.type !== 'select' || [...input.options].some((o) => o.value === String(candidato))) input.value = candidato;
     return el('label', {}, f.label, input);
   });
-  form.replaceChildren(...nodes, el('button', { className: 'primary', type: 'submit', textContent: 'Crear ' + def.title.toLowerCase() }));
+
+  const acciones = el('div', { className: 'form-actions' }, el('button', { className: 'primary', type: 'submit', textContent: item ? 'Guardar cambios' : 'Crear ' + def.title.toLowerCase() }));
+  if (item) {
+    const cancel = el('button', { className: 'cancel', type: 'button', textContent: 'Cancelar' });
+    cancel.onclick = () => {
+      editing = null;
+      renderGestion();
+      renderForm(false);
+    };
+    acciones.append(cancel);
+  }
+  form.replaceChildren(...nodes, acciones);
 }
 
 $('form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const def = FORMS[tab];
+  const def = RES[tab];
   const data = new FormData(e.target);
   const payload = {};
-  for (const f of def.fields()) {
+  for (const f of def.campos()) {
     if (f.type === 'check') continue;
     const v = data.get(f.name);
     const numeric = f.type === 'number' || (f.type === 'select' && f.name.endsWith('Id'));
@@ -385,15 +525,22 @@ $('form').addEventListener('submit', async (e) => {
   const submit = e.target.querySelector('button[type=submit]');
   submit.disabled = true;
   try {
-    const res = await api.create(def.recurso, payload);
-    toast(res.message ?? def.title + ' creada');
-    if (tab === 'lectura' && data.get('auto')) {
-      const sensor = raw.sensores.find((s) => s.id === payload.sensorId);
-      const zona = raw.zonas.find((z) => z.id === sensor?.zona?.id);
-      if (zona) await alertaAutomatica(res.data, zona);
+    if (editing) {
+      const res = await api.update(def.recurso, editing.id, payload);
+      toast(res.message ?? def.title + ' actualizada');
+      editing = null;
+    } else {
+      const res = await api.create(def.recurso, payload);
+      toast(res.message ?? def.title + ' creada');
+      if (tab === 'lectura' && data.get('auto')) {
+        const sensor = raw.sensores.find((s) => s.id === payload.sensorId);
+        const zona = raw.zonas.find((z) => z.id === sensor?.zona?.id);
+        if (zona) await alertaAutomatica(res.data, zona);
+      }
     }
     e.target.reset();
     await refresh();
+    renderForm(false);
   } catch (err) {
     toast(err.message, 'error');
   } finally {
@@ -404,6 +551,7 @@ $('form').addEventListener('submit', async (e) => {
 // ---------- arranque ----------
 renderLegend();
 renderTabs();
+renderGestion();
 renderForm();
 renderOnline();
 tick();

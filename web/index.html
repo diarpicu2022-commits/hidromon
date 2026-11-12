@@ -25,7 +25,7 @@
       <nav class="sidenav" id="nav">
         <button data-view="inicio" class="active"><span>🏠</span> Inicio</button>
         <button data-view="historial"><span>🕘</span> Historial</button>
-        <button data-view="crear"><span>➕</span> Crear datos</button>
+        <button data-view="crear"><span>🛠️</span> Gestionar</button>
       </nav>
 
       <!-- INICIO -->
@@ -72,12 +72,19 @@
         </div>
       </section>
 
-      <!-- CREAR -->
-      <section id="view-crear" class="view crear" hidden>
-        <div class="card form-card">
-          <div class="card-head"><h2>➕ Crear datos</h2></div>
-          <p class="subtle">Respeta el orden: zona → sensor → lectura → alerta. Cada uno necesita que exista el anterior.</p>
+      <!-- GESTIONAR (crear, editar y eliminar) -->
+      <section id="view-crear" class="view gestionar" hidden>
+        <div class="card list-card">
+          <div class="card-head">
+            <h2>🛠️ Gestionar datos</h2>
+            <button id="btn-nuevo" class="primary small" type="button">+ Nuevo</button>
+          </div>
           <div id="tabs" class="tabs"></div>
+          <div class="table-wrap"><table id="tbl-gestion"></table></div>
+        </div>
+        <div class="card form-card">
+          <div class="card-head"><h2 id="form-title">Nueva zona</h2></div>
+          <p class="subtle" id="form-hint"></p>
           <form id="form" autocomplete="off"></form>
         </div>
       </section>

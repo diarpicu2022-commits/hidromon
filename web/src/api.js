@@ -21,6 +21,9 @@ export const api = {
   alertas: () => request('/alertas'),
   create: (recurso, payload) =>
     request(`/${recurso}`, { method: 'POST', body: JSON.stringify(payload) }),
+  update: (recurso, id, payload) =>
+    request(`/${recurso}/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  remove: (recurso, id) => request(`/${recurso}/${id}`, { method: 'DELETE' }),
 
   // Trae los cuatro recursos y los deja listos para dibujar.
   async snapshot() {
