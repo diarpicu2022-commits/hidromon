@@ -1,54 +1,46 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { CreateAlertaDto } from './alerta.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { CreateAlertaDto, UpdateAlertaDto } from './alerta.dto';
 import { AlertasService } from './alertas.service';
 
 @Controller('alertas')
 export class AlertasController {
+  constructor(private alertasService: AlertasService) {}
 
-    constructor(private readonly alertasService: AlertasService) {}
+  @Get('')
+  getAllAlertas() {
+    return this.alertasService.findAll();
+  }
 
-    @Get()
-    getAlertas() {
-        return this.alertasService.findAll();
-    }
+  @Get(':id')
+  getAlertaById(@Param('id') id: string) {
+    return this.alertasService.findById(id);
+  }
 
-    @Get('id/:id')
-    getAlertaById(@Param('id') id: string) {
-        console.log('ID recibido:', id);
-        const alerta = this.alertasService.findById(id);
-        console.log('Alerta encontrada:', alerta);
-        return alerta;
-    }
+  @Get('search/:nivel')
+  getAlertasByNivel(@Param('nivel') nivel: string) {
+    return this.alertasService.search(nivel);
+  }
 
-    @Get('nivel/:nivel')
-    getAlertasByNivel(@Param('nivel') nivel: string) {
-        console.log('Nivel recibido:', nivel);
-        const alertas = this.alertasService.findByNivel(nivel);
-        console.log('Alertas encontradas:', alertas);
-        return alertas;
-    }
+  @Post()
+  createAlerta(@Body() alertaPayload: CreateAlertaDto) {
+    return this.alertasService.create(alertaPayload);
+  }
 
-    @Post()
-    createAlerta(@Body() alertaPayLoad: CreateAlertaDto) {
-        console.log('.:: alerta: ', alertaPayLoad);
-        return this.alertasService.create(alertaPayLoad);
-    }
+  @Delete(':id')
+  deleteAlerta(@Param('id') id: string) {
+    return this.alertasService.delete(id);
+  }
 
-    @Delete(':id')
-    deleteAlerta(@Param('id') id: string) {
-        this.alertasService.delete(id);
-        return {
-            msg: "Alerta eliminada correctamente"
-        }
-    }
-
-    @Put(':id')
-    updateAlerta(@Param('id') id: string, @Body() changes: CreateAlertaDto) {
-        const updatedAlerta = this.alertasService.update(id, changes);
-        return {
-            msg: "Alerta actualizada correctamente",
-            data: updatedAlerta
-        }
-    }
-
+  @Put(':id')
+  updateAlerta(@Param('id') id: string, @Body() changes: UpdateAlertaDto) {
+    return this.alertasService.update(id, changes);
+  }
 }

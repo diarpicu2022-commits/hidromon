@@ -75,8 +75,8 @@ Y cada uno trae una búsqueda propia:
 | `usuarios` | `GET /usuarios/search/:nombre` → devuelve el correo | `/usuarios/search/Diego Pinta` |
 | `sensores` | `GET /sensores/search/:tipo` | `/sensores/search/Suelo` |
 | `zonas` | `GET /zonas/cultivo/:cultivo` | `/zonas/cultivo/Papa` |
-| `lecturas` | `GET /lecturas/sensor/:sensorId` | `/lecturas/sensor/1` |
-| `alertas` | `GET /alertas/nivel/:nivel` | `/alertas/nivel/Alta` |
+| `lecturas` | `GET /lecturas/search/:sensorId` | `/lecturas/search/1` |
+| `alertas` | `GET /alertas/search/:nivel` | `/alertas/search/Alta` |
 
 ### Ejemplos
 

@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Lectura } from './lectura.model';
-import { CreateLecturaDto } from './lectura.dto';
+import { CreateLecturaDto, UpdateLecturaDto } from './lectura.dto';
 
 @Injectable()
 export class LecturasService {
+  constructor() {}
 
   private lecturas: Lectura[] = [
     { id: '1', sensorId: '1', valor: 72, fecha: '2026-10-01 06:00', isActive: true },
@@ -20,70 +25,81 @@ export class LecturasService {
     { id: '12', sensorId: '10', valor: 65, fecha: '2026-10-01 06:00', isActive: true },
     { id: '13', sensorId: '11', valor: 59, fecha: '2026-10-01 06:00', isActive: true },
     { id: '14', sensorId: '13', valor: 45, fecha: '2026-10-01 06:00', isActive: true },
-    { id: '15', sensorId: '15', valor: 73, fecha: '2026-10-01 06:00', isActive: true }
+    { id: '15', sensorId: '15', valor: 73, fecha: '2026-10-01 06:00', isActive: true },
   ];
 
+
   findAll(): Lectura[] {
-    return this.lecturas.filter(lectura => lectura.isActive);
+    // logica de negocio
+    return this.lecturas.filter((lectura) => lectura.isActive);
   }
 
   findById(id: string): Lectura | undefined {
-    console.log('.:: Lectura ID:', id);
+    console.log('.:: Lectura ID: ', id);
     const lectura = this.lecturas.find((lectura) => lectura.id === id);
+    console.log('.:: lectura buscada: ', lectura);
     if (lectura === undefined) {
-      // Simulacion de lectura no encontrada
+      // Simulación de lectura no encontrada, error 404
       throw new NotFoundException(`Lectura con ID ${id} no existe`);
+    }
 
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a la lectura con ID ${id}`);
+    // Simulación para error de permisos
+    if (lectura.id === '1') {
+      throw new ForbiddenException(
+        `No tienes permisos para acceder a la lectura con ID ${id}`,
+      );
     }
     return lectura;
   }
 
-  findBySensor(sensorId: string): Lectura[] {
-    const lecturas = this.lecturas.filter(lectura => lectura.sensorId === sensorId);
-    if (lecturas.length === 0) {
-      //simulacion para el sensor sin lecturas
+  search(sensorId: string): Lectura[] {
+    const data = this.lecturas.filter((lectura) => lectura.sensorId === sensorId);
+    if (data.length === 0) {
       throw new NotFoundException(`Lecturas del sensor ${sensorId} no existen`);
-
-      // Simulacion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a las lecturas del sensor ${sensorId}`);
     }
-    return lecturas;
+    return data;
   }
 
-  create(lecturaPayLoad: CreateLecturaDto): Lectura {
-    const newLectura: Lectura = {
-      ...lecturaPayLoad,
+  create(lecturaPayload: CreateLecturaDto) {
+    const newLectura = {
+      ...lecturaPayload,
       id: `${new Date().getTime()}`,
-      isActive: true
+      isActive: true,
     };
     this.lecturas.push(newLectura);
-    return newLectura;
+
+    return {
+      message: 'Lectura creada correctamente',
+      data: lecturaPayload,
+    };
   }
 
   delete(id: string) {
-    const position = this.findPosition(id);
-    this.lecturas.splice(position, 1);
-    return { msg: `Lectura eliminada correctamente` };
-  }
-
-  update(id: string, changes: CreateLecturaDto) {
-    const position = this.findPosition(id);
-    const updatedLectura = { ...this.lecturas[position], ...changes };
-    this.lecturas[position] = updatedLectura;
-    return updatedLectura;
-  }
-
-  private findPosition(id: string): number {
     const position = this.lecturas.findIndex((lectura) => lectura.id === id);
     if (position === -1) {
-      // Simulacion de lectura no encontrada
       throw new NotFoundException(`Lectura con ID ${id} no existe`);
-
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para modificar la lectura con ID ${id}`);
     }
-    return position;
+    this.lecturas.splice(position, 1);
+    return {
+      msg: 'Lectura eliminada correctamente',
+    };
+  }
+
+  update(id: string, changes: UpdateLecturaDto) {
+    const position = this.lecturas.findIndex((lectura) => lectura.id === id);
+    if (position === -1) {
+      throw new NotFoundException(`Lectura con ID ${id} no existe`);
+    }
+    const currentData = this.lecturas[position];
+    const updateLectura = {
+      ...currentData,
+      ...changes,
+    };
+    this.lecturas[position] = updateLectura;
+
+    return {
+      msg: 'Lectura actualizada',
+      data: updateLectura,
+    };
   }
 }

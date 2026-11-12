@@ -1,54 +1,46 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { CreateLecturaDto } from './lectura.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { CreateLecturaDto, UpdateLecturaDto } from './lectura.dto';
 import { LecturasService } from './lecturas.service';
 
 @Controller('lecturas')
 export class LecturasController {
+  constructor(private lecturasService: LecturasService) {}
 
-    constructor(private readonly lecturasService: LecturasService) {}
+  @Get('')
+  getAllLecturas() {
+    return this.lecturasService.findAll();
+  }
 
-    @Get()
-    getLecturas() {
-        return this.lecturasService.findAll();
-    }
+  @Get(':id')
+  getLecturaById(@Param('id') id: string) {
+    return this.lecturasService.findById(id);
+  }
 
-    @Get('id/:id')
-    getLecturaById(@Param('id') id: string) {
-        console.log('ID recibido:', id);
-        const lectura = this.lecturasService.findById(id);
-        console.log('Lectura encontrada:', lectura);
-        return lectura;
-    }
+  @Get('search/:sensorId')
+  getLecturasBySensorId(@Param('sensorId') sensorId: string) {
+    return this.lecturasService.search(sensorId);
+  }
 
-    @Get('sensor/:sensorId')
-    getLecturasBySensor(@Param('sensorId') sensorId: string) {
-        console.log('Sensor recibido:', sensorId);
-        const lecturas = this.lecturasService.findBySensor(sensorId);
-        console.log('Lecturas encontradas:', lecturas);
-        return lecturas;
-    }
+  @Post()
+  createLectura(@Body() lecturaPayload: CreateLecturaDto) {
+    return this.lecturasService.create(lecturaPayload);
+  }
 
-    @Post()
-    createLectura(@Body() lecturaPayLoad: CreateLecturaDto) {
-        console.log('.:: lectura: ', lecturaPayLoad);
-        return this.lecturasService.create(lecturaPayLoad);
-    }
+  @Delete(':id')
+  deleteLectura(@Param('id') id: string) {
+    return this.lecturasService.delete(id);
+  }
 
-    @Delete(':id')
-    deleteLectura(@Param('id') id: string) {
-        this.lecturasService.delete(id);
-        return {
-            msg: "Lectura eliminada correctamente"
-        }
-    }
-
-    @Put(':id')
-    updateLectura(@Param('id') id: string, @Body() changes: CreateLecturaDto) {
-        const updatedLectura = this.lecturasService.update(id, changes);
-        return {
-            msg: "Lectura actualizada correctamente",
-            data: updatedLectura
-        }
-    }
-
+  @Put(':id')
+  updateLectura(@Param('id') id: string, @Body() changes: UpdateLecturaDto) {
+    return this.lecturasService.update(id, changes);
+  }
 }
