@@ -39,7 +39,7 @@ body {
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .logo {
-  width: 44px; height: 44px; display: grid; place-items: center; font-size: 24px;
+  width: 44px; height: 44px; display: grid; place-items: center; color: var(--primary);
   background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
 }
 .brand h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
@@ -214,3 +214,17 @@ button.cancel { padding: 11px 14px; border: 1px solid var(--line); border-radius
   .view.gestionar { grid-template-columns: 1fr; }
   .form-card { position: static; }
 }
+
+/* ---------- iconos de línea ---------- */
+.ico { display: inline-flex; width: 1.2em; height: 1.2em; flex: none; vertical-align: -0.2em; }
+.ico svg { width: 100%; height: 100%; }
+.logo.ico { width: 44px; height: 44px; padding: 10px; }
+.sidenav button .ico { width: 20px; height: 20px; color: var(--muted); }
+.sidenav button.active .ico { color: #fff; }
+.card-head h2 { display: flex; align-items: center; gap: 8px; }
+.card-head h2 .ico { color: var(--primary); }
+.kpi .label .ico { color: var(--primary); width: 16px; height: 16px; }
+.kpi .label { gap: 7px; }
+.sys li .sname { display: inline-flex; align-items: center; gap: 9px; }
+.sys li .sname .ico { color: var(--muted); width: 17px; height: 17px; }
+.pill svg { width: 14px; height: 14px; flex: none; }

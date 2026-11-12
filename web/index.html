@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HidroMon · Monitoreo de humedad</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7df6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3s6 6.2 6 10.5a6 6 0 0 1-12 0C6 9.2 12 3 12 3z'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app">
       <header class="topbar">
         <div class="brand">
-          <span class="logo">💧</span>
+          <span class="logo" data-icon="drop"></span>
           <div>
             <h1>HidroMon</h1>
             <p>Monitoreo inteligente de la humedad del suelo</p>
@@ -23,9 +24,9 @@
       </header>
 
       <nav class="sidenav" id="nav">
-        <button data-view="inicio" class="active"><span>🏠</span> Inicio</button>
-        <button data-view="historial"><span>🕘</span> Historial</button>
-        <button data-view="crear"><span>🛠️</span> Gestionar</button>
+        <button data-view="inicio" class="active"><span data-icon="home"></span> Inicio</button>
+        <button data-view="historial"><span data-icon="history"></span> Historial</button>
+        <button data-view="crear"><span data-icon="settings"></span> Gestionar</button>
       </nav>
 
       <!-- INICIO -->
@@ -44,7 +45,7 @@
         <aside class="side">
           <section class="card">
             <div class="card-head">
-              <h2>📊 Datos en tiempo real</h2>
+              <h2><span data-icon="chart"></span> Datos en tiempo real</h2>
               <span class="updated"><i></i><span id="updated">–</span></span>
             </div>
             <div id="kpis" class="kpis"></div>
@@ -52,7 +53,7 @@
 
           <section class="card">
             <div class="card-head">
-              <h2>✅ Estado del sistema</h2>
+              <h2><span data-icon="check"></span> Estado del sistema</h2>
               <span id="sys-badge" class="badge ok">Funcionando</span>
             </div>
             <ul id="sys" class="sys"></ul>
@@ -63,11 +64,11 @@
       <!-- HISTORIAL -->
       <section id="view-historial" class="view historial" hidden>
         <div class="card">
-          <div class="card-head"><h2>🕘 Últimas lecturas</h2></div>
+          <div class="card-head"><h2><span data-icon="clock"></span> Últimas lecturas</h2></div>
           <div class="table-wrap"><table id="tbl-lecturas"></table></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>⚠ Alertas</h2></div>
+          <div class="card-head"><h2><span data-icon="alert"></span> Alertas</h2></div>
           <div class="table-wrap"><table id="tbl-alertas"></table></div>
         </div>
       </section>
@@ -76,7 +77,7 @@
       <section id="view-crear" class="view gestionar" hidden>
         <div class="card list-card">
           <div class="card-head">
-            <h2>🛠️ Gestionar datos</h2>
+            <h2><span data-icon="settings"></span> Gestionar datos</h2>
             <button id="btn-nuevo" class="primary small" type="button">+ Nuevo</button>
           </div>
           <div id="tabs" class="tabs"></div>

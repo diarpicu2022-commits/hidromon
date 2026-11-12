@@ -1,6 +1,7 @@
 import { api } from './api.js';
 import { ESTADOS, buildWorld } from './model.js';
 import { createScene } from './scene.js';
+import { iconEl, hydrateIcons } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
@@ -131,7 +132,7 @@ function renderLegend() {
 function kpi(icon, label, value, extra, bar, sub) {
   const v = el('div', { className: 'value' }, value);
   if (extra) v.append(extra);
-  const box = el('div', { className: 'kpi' }, el('div', { className: 'label', textContent: icon + ' ' + label }), v);
+  const box = el('div', { className: 'kpi' }, el('div', { className: 'label' }, iconEl(icon), label), v);
   if (bar !== undefined) box.append(el('div', { className: 'bar' }, el('i', { style: 'width:' + Math.max(0, Math.min(100, bar)) + '%' })));
   if (sub) box.append(el('div', { className: 'label', textContent: sub }));
   return box;
@@ -160,10 +161,10 @@ function renderKpis() {
   const cultivos = new Set(raw.zonas.map((z) => z.cultivo)).size;
 
   $('kpis').replaceChildren(
-    kpi('💧', 'Humedad promedio', prom === null ? '–' : prom.toFixed(0) + ' %', badge(estado, texto), prom ?? 0),
-    kpi('📡', 'Sensores en rango', enRango + '/' + todos.length, undefined, todos.length ? (enRango / todos.length) * 100 : 0),
-    kpi('🚨', 'Alertas activas', String(activas), activas ? badge(altos ? 'alto' : 'bajo', altos ? 'Alta' : 'Baja') : badge('ok', 'Todo en rango'), undefined, raw.alertas.length + ' en el historial'),
-    kpi('🌱', 'Zonas', String(raw.zonas.length), el('small', { textContent: cultivos + (cultivos === 1 ? ' cultivo' : ' cultivos') })),
+    kpi('drop', 'Humedad promedio', prom === null ? '–' : prom.toFixed(0) + ' %', badge(estado, texto), prom ?? 0),
+    kpi('sensor', 'Sensores en rango', enRango + '/' + todos.length, undefined, todos.length ? (enRango / todos.length) * 100 : 0),
+    kpi('bell', 'Alertas activas', String(activas), activas ? badge(altos ? 'alto' : 'bajo', altos ? 'Alta' : 'Baja') : badge('ok', 'Todo en rango'), undefined, raw.alertas.length + ' en el historial'),
+    kpi('sprout', 'Zonas', String(raw.zonas.length), el('small', { textContent: cultivos + (cultivos === 1 ? ' cultivo' : ' cultivos') })),
   );
 }
 
@@ -172,15 +173,15 @@ function renderSystem() {
   const sensoresConDatos = zonas.flatMap((z) => z.sensores).filter((s) => s.ultima).length;
   const activas = zonas.reduce((n, z) => n + (z.alertaActual?.count ?? 0), 0);
   const filas = [
-    ['🌐 Conexión API (HidroMon)', online ? 'Conectado' : 'Sin conexión', online ? 'ok' : 'alto'],
-    ['🗄️ Base de datos (Postgres)', online ? 'OK' : 'Sin respuesta', online ? 'ok' : 'alto'],
-    ['📡 Sensores con lecturas', sensoresConDatos + ' de ' + raw.sensores.length, sensoresConDatos ? 'ok' : 'sin'],
-    ['🌱 Zonas registradas', String(raw.zonas.length), raw.zonas.length ? 'ok' : 'sin'],
-    ['🚨 Alertas activas', activas ? activas + ' ahora' : 'Ninguna', activas ? 'alto' : 'ok'],
+    ['globe', 'Conexión API (HidroMon)', online ? 'Conectado' : 'Sin conexión', online ? 'ok' : 'alto'],
+    ['database', 'Base de datos (Postgres)', online ? 'OK' : 'Sin respuesta', online ? 'ok' : 'alto'],
+    ['sensor', 'Sensores con lecturas', sensoresConDatos + ' de ' + raw.sensores.length, sensoresConDatos ? 'ok' : 'sin'],
+    ['sprout', 'Zonas registradas', String(raw.zonas.length), raw.zonas.length ? 'ok' : 'sin'],
+    ['bell', 'Alertas activas', activas ? activas + ' ahora' : 'Ninguna', activas ? 'alto' : 'ok'],
   ];
   const color = { ok: 'var(--green)', alto: 'var(--red)', sin: 'var(--grey)' };
   $('sys').replaceChildren(
-    ...filas.map(([nombre, valor, st]) => el('li', {}, nombre, el('span', { className: 'st' }, el('i', { style: 'background:' + color[st] }), valor))),
+    ...filas.map(([ico, nombre, valor, st]) => el('li', {}, el('span', { className: 'sname' }, iconEl(ico), nombre), el('span', { className: 'st' }, el('i', { style: 'background:' + color[st] }), valor))),
   );
   const sb = $('sys-badge');
   sb.className = 'badge ' + (online ? 'ok' : 'alto');
@@ -549,6 +550,7 @@ $('form').addEventListener('submit', async (e) => {
 });
 
 // ---------- arranque ----------
+hydrateIcons();
 renderLegend();
 renderTabs();
 renderGestion();

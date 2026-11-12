@@ -7,6 +7,8 @@ const PARCELA = 6; // lado útil de cada jardinera
 const SEPARACION = 10.5;
 const ALTO_TUBO = 3.4; // altura que representa el 100 % de humedad en el medidor
 const COLOR_NIVEL = { Alta: 0xef4444, Media: 0xf59e0b, Baja: 0xf5c518 };
+const ICONO_ALERTA =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5"/><path d="M12 18.5v.01"/></svg>';
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 
 export function createScene(container, onSelect) {
@@ -217,7 +219,7 @@ export function createScene(container, onSelect) {
     g.add(cono);
     pulsing.push(cono);
     const extra = actual.count > 1 ? ' · ' + actual.count + ' sensores' : '';
-    const tag = pill('<b>⚠ ' + esc(actual.nivel) + extra + '</b>', 'alerta');
+    const tag = pill(ICONO_ALERTA + '<b>' + esc(actual.nivel) + extra + '</b>', 'alerta');
     tag.position.set(0, 1, 0);
     cono.add(tag);
   }
