@@ -155,6 +155,26 @@ La API queda en `http://localhost:3000`. Para usar otro puerto: `PORT=4000 npm r
 | `npm run start:prod` | Ejecuta lo compilado |
 | `npm run test` | Pruebas unitarias |
 
+## 🌱 Interfaz 3D (Three.js)
+
+En `web/` hay un invernadero 3D que consume la API y sirve para ver cómo funciona todo junto.
+Cada **zona** es una parcela; el nivel de agua es el promedio de la última lectura de sus sensores,
+y los marcos blanco y amarillo son su humedad mínima y máxima. Los **sensores** cambian de color
+según su última lectura (verde dentro del rango, azul por debajo, rojo por encima, gris sin datos)
+y las **alertas** aparecen como un cono sobre la zona. Haz clic en una zona o sensor para ver su detalle.
+Desde el panel de la izquierda se pueden crear zonas, sensores, lecturas y alertas, y un sensor
+seleccionado puede enviar una lectura aleatoria (si sale del rango se crea la alerta sola).
+
+```bash
+# con la API corriendo en el puerto 3000
+cd web
+npm install
+npm run dev                # http://localhost:5173
+```
+
+En desarrollo, Vite reenvía `/api` a `http://localhost:3000`, así que no hace falta CORS.
+`npm run build` genera la versión estática en `web/dist/`.
+
 ## 📁 Estructura
 
 ```
