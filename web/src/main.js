@@ -161,7 +161,8 @@ function renderKpis() {
   const hayAlta = abiertas.some((a) => a.nivel === 'Alta');
   const hayBaja = abiertas.some((a) => a.nivel === 'Baja');
   const nivelKpi = hayAlta ? ['alto', 'Alta'] : hayBaja ? ['bajo', 'Baja'] : ['warn', 'Media'];
-  const cultivos = new Set(raw.zonas.map((z) => z.cultivo)).size;
+  // Cultivos distintos en las zonas: el principal y los sembrados, sin repetir por nombre.
+  const cultivos = new Set(raw.zonas.flatMap((z) => [z.cultivo, ...(z.cultivos ?? []).map((c) => c.nombre)]).map((n) => n.trim().toLowerCase())).size;
 
   $('kpis').replaceChildren(
     kpi('drop', 'Humedad promedio', prom === null ? '–' : prom.toFixed(0) + ' %', badge(estado, texto), prom ?? 0),

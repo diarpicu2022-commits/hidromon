@@ -57,13 +57,21 @@ Nada fuera de esto sin permiso fechado.
   «Cultivos sembrados» con la pista «Marca todos los que apliquen».
 - **Pestaña Cultivos.** Usa el mismo motor de tablas y formularios: columnas ID, Nombre, Zonas.
   Formulario con Nombre y Descripción (opcional).
-- **Detalle de zona.** Fila «Cultivos sembrados» con la lista en texto, o «ninguno» en gris.
+- **Detalle de zona.** Fila «Cultivos sembrados» con la lista en texto, o «ninguno» en `--text` con peso 400 (enmienda 2).
+- **Indicador Zonas del inicio.** Cuenta los cultivos distintos entre el principal y los sembrados (enmienda 3).
 
 ### Enmiendas
 
 1. **2026-11-12, aprobada por Diego.** El texto de la píldora marcada pasa de `--primary` a `--text`.
    Motivo: `--primary` sobre `--primary-soft` midió 3,39:1, por debajo de AA. El borde, el fondo y la
    casilla marcada siguen señalando la selección. No se agregan tokens.
+
+2. **2026-11-12, aprobada por Diego.** «ninguno» pasa de `--muted` a `--text` con peso 400.
+   Motivo: `--muted` sobre el panel midió 4,05:1, por debajo de AA. Los valores reales siguen en
+   peso 600, así que el vacío se distingue por peso y no por color.
+3. **2026-11-12, aprobada por Diego** («haz los arreglos que veas necesarios»). El indicador Zonas
+   contaba solo los textos distintos de «Cultivo principal». Ahora cuenta la unión, por nombre, del
+   principal y los sembrados.
 
 ## 6. Estados
 
