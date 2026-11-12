@@ -27,30 +27,31 @@ agricultores y administradores pueden:
 - 🎯 **Definir umbrales** mínimos y máximos para cada cultivo o zona.
 - 🚨 **Recibir alertas** cuando una lectura se sale del rango.
 
-Este repositorio contiene el **backend**. Está hecho en NestJS con el mismo patrón que vimos
-en la práctica 3 de *Framework WEB*: modelo, DTO, controlador y servicio, con los datos
-guardados en memoria.
+Este repositorio contiene el **backend**. Está hecho en NestJS con TypeORM y Postgres, y cada
+recurso sigue el mismo patrón de la clase: módulo, entidad, DTOs, controlador y servicio con repositorio.
 
 ## 🧩 Entidades
 
 ```mermaid
 erDiagram
-    USUARIO ||--o{ ZONA : gestiona
+    USUARIO ||--|| PERFIL : tiene
     ZONA ||--o{ SENSOR : agrupa
     SENSOR ||--o{ LECTURA : registra
-    LECTURA ||--o| ALERTA : genera
+    LECTURA ||--o{ ALERTA : genera
     ZONA ||--o{ ALERTA : recibe
 ```
 
 | Entidad | Campos | Qué representa |
 |---|---|---|
-| **Usuario** | `nombre`, `email`, `rol`, `nickname` | Agricultor o administrador que consulta el sistema |
+| **Usuario** | `nombre`, `email`, `rol`, `perfil` | Agricultor o administrador que consulta el sistema |
+| **Perfil** | `municipio`, `finca`, `nickname`, `avatar` | Datos del usuario (relación 1 a 1) |
 | **Sensor** | `codigo`, `tipo`, `zonaId` | Dispositivo IoT de humedad de `Suelo` o `Ambiental` |
 | **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax` | Área de cultivo con sus umbrales |
 | **Lectura** | `sensorId`, `valor`, `fecha` | Una medición tomada por un sensor |
 | **Alerta** | `lecturaId`, `zonaId`, `nivel`, `mensaje` | Aviso de que una lectura quedó por encima (`Alta`) o por debajo (`Baja`) del rango |
 
-Todos los registros tienen además `id` e `isActive`.
+Todos los registros tienen `id` numérico, `createdAt` y `updatedAt`. Un sensor necesita una zona
+que exista, una lectura necesita un sensor que exista y una alerta necesita una lectura y una zona que existan.
 
 ## 🛣️ Endpoints
 
@@ -60,13 +61,14 @@ Los cinco recursos comparten las mismas rutas:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET` | `/{recurso}` | Lista los registros activos |
-| `GET` | `/{recurso}/id/:id` | Busca uno por su id |
+| `GET` | `/{recurso}` | Lista los registros (`{ data, count }`) |
+| `GET` | `/{recurso}/:id` | Busca uno por su id |
+| `GET` | `/{recurso}/search/:valor` | Búsqueda propia de cada recurso (tabla de abajo) |
 | `POST` | `/{recurso}` | Crea un registro |
 | `PUT` | `/{recurso}/:id` | Actualiza un registro |
 | `DELETE` | `/{recurso}/:id` | Elimina un registro |
 
-> `usuarios` ya sigue el patrón de `users` de la profe: se busca por `GET /usuarios/:id` y el usuario `1` responde 403 a propósito, como en clase.
+> En los cinco recursos `GET /{recurso}/1` responde **403 a propósito** (simulación de permisos vista en clase), y el id debe ser numérico: `GET /{recurso}/abc` responde 400.
 
 Y cada uno trae una búsqueda propia:
 
@@ -83,31 +85,39 @@ Y cada uno trae una búsqueda propia:
 **Crear una zona**
 
 ```bash
-curl -X POST http://localhost:3000/zonas \
-  -H "Content-Type: application/json" \
-  -d '{"nombre":"Lote Nuevo","cultivo":"Papa","humedadMin":60,"humedadMax":80}'
+curl -X POST http://localhost:3000/zonas   -H "Content-Type: application/json"   -d '{"nombre":"Lote Nuevo","cultivo":"Papa","humedadMin":60,"humedadMax":80}'
 ```
 
 ```json
-{ "nombre": "Lote Nuevo", "cultivo": "Papa", "humedadMin": 60, "humedadMax": 80, "id": "1791417181597", "isActive": true }
+{ "message": "Zona creada correctamente", "data": { "id": 3, "nombre": "Lote Nuevo", "cultivo": "Papa", "humedadMin": 60, "humedadMax": 80, "createdAt": "2026-11-12T06:37:44.766Z", "updatedAt": "2026-11-12T06:37:44.766Z" } }
+```
+
+**Crear un sensor en esa zona**
+
+```bash
+curl -X POST http://localhost:3000/sensores   -H "Content-Type: application/json"   -d '{"codigo":"HS-001","tipo":"Suelo","zonaId":3}'
 ```
 
 **Actualizar una lectura**
 
 ```bash
-curl -X PUT http://localhost:3000/lecturas/1 \
-  -H "Content-Type: application/json" \
-  -d '{"sensorId":"1","valor":75,"fecha":"2026-10-07 08:00"}'
+curl -X PUT http://localhost:3000/lecturas/2   -H "Content-Type: application/json"   -d '{"valor":75}'
 ```
 
 ```json
-{ "msg": "Lectura actualizada correctamente", "data": { "id": "1", "sensorId": "1", "valor": 75, "fecha": "2026-10-07 08:00", "isActive": true } }
+{ "message": "Lectura actualizada correctamente", "data": { "id": 2, "valor": 75, "fecha": "2026-10-01T12:00:00.000Z", "sensor": { "id": 1 } } }
 ```
 
 **Buscar algo que no existe**
 
 ```json
 { "message": "Sensor con ID 99 no existe", "error": "Not Found", "statusCode": 404 }
+```
+
+**Crear un sensor con una zona que no existe**
+
+```json
+{ "message": "Error al crear el sensor: revisa que la zona exista y que el código no esté repetido", "error": "Bad Request", "statusCode": 400 }
 ```
 
 ## 🚀 Cómo ejecutarlo
@@ -153,12 +163,13 @@ src/
 ├── app.module.ts          # ConfigModule, TypeORM (Postgres) y los módulos
 ├── env.model.ts           # variables de entorno que usa la app
 ├── usuarios/
-│   ├── usuario.model.ts   # interfaz del recurso
-│   ├── usuario.dto.ts     # DTO de creación y edición con class-validator
+│   ├── entities/          # entidades TypeORM (Usuario, Perfil)
+│   ├── dtos/              # DTOs de creación y edición con class-validator
 │   ├── usuarios.controller.ts
 │   ├── usuarios.service.ts
+│   ├── usuarios.module.ts
 │   └── *.spec.ts          # pruebas
-├── sensores/              # misma estructura
+├── sensores/              # misma estructura (entities/, dtos/, módulo)
 ├── zonas/
 ├── lecturas/
 └── alertas/
@@ -166,8 +177,9 @@ src/
 
 ## ⚠️ Limitaciones conocidas
 
-- La conexión a Postgres ya está configurada, pero todavía no hay entidades: los datos siguen **en memoria** y al reiniciar el servidor vuelven los 15 registros iniciales de cada recurso.
-- `npm run test` no arranca con la configuración actual: NestJS 12 se distribuye como ES Module y el Jest de la plantilla no lo carga. Le pasa igual a la plantilla de la práctica.
+- Las tablas se crean solas con `synchronize: true`. Sirve para desarrollo y clase; para producción habría que usar migraciones.
+- Al empezar la base está vacía: crea primero una zona, luego un sensor, una lectura y una alerta, en ese orden (cada una necesita la anterior).
+- `npm run test` no arranca con la configuración actual: NestJS 12 se distribuye como ES Module y el Jest de la plantilla no lo carga con Node anteriores a 24.9. Le pasa igual a la plantilla de la práctica.
 
 ## 🤝 Cómo contribuir
 
