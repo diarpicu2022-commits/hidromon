@@ -402,6 +402,7 @@ const RES = {
     title: 'Sensor',
     plural: 'Sensores',
     recurso: 'sensores',
+    nuevo: 'Nuevo sensor',
     hint: 'Un sensor pertenece a una zona que ya exista.',
     lista: () => raw.sensores,
     cabeceras: ['ID', 'Código', 'Tipo', 'Zona'],
@@ -453,6 +454,7 @@ const RES = {
     title: 'Usuario',
     plural: 'Usuarios',
     recurso: 'usuarios',
+    nuevo: 'Nuevo usuario',
     hint: 'Un usuario puede ser responsable de zonas. Al crearlo se registra también su perfil.',
     lista: () => raw.usuarios,
     cabeceras: ['ID', 'Nombre', 'Correo', 'Rol'],
@@ -517,7 +519,7 @@ function renderForm(keepValues = false) {
   const inicial = item ? def.valores(item) : {};
   const kept = keepValues ? Object.fromEntries(new FormData(form)) : {};
 
-  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : 'Nueva ' + def.title.toLowerCase();
+  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : def.nuevo ?? 'Nueva ' + def.title.toLowerCase();
   $('form-hint').textContent = def.hint;
 
   const nodes = def.campos().map((f) => {
