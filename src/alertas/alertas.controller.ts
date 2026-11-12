@@ -4,9 +4,12 @@ import {
   Delete,
   Get,
   Param,
+  ParseBoolPipe,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { CreateAlertaDto, UpdateAlertaDto } from './dtos/alerta.dto';
 import { AlertasService } from './alertas.service';
@@ -16,8 +19,10 @@ export class AlertasController {
   constructor(private alertasService: AlertasService) {}
 
   @Get('')
-  getAllAlertas() {
-    return this.alertasService.findAll();
+  getAllAlertas(
+    @Query('resuelta', new ParseBoolPipe({ optional: true })) resuelta?: boolean,
+  ) {
+    return this.alertasService.findAll(resuelta);
   }
 
   @Get(':id')
@@ -28,6 +33,11 @@ export class AlertasController {
   @Get('search/:nivel')
   getAlertasByNivel(@Param('nivel') nivel: string) {
     return this.alertasService.search(nivel);
+  }
+
+  @Patch(':id/resolver')
+  resolveAlerta(@Param('id', ParseIntPipe) id: number) {
+    return this.alertasService.resolve(id);
   }
 
   @Post()
