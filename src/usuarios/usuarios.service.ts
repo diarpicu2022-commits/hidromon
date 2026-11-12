@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -58,7 +59,14 @@ export class UsuariosService {
 
   async delete(id: number) {
     const usuario = await this.findOne(id);
-    const result = await this.usuarioRepository.delete(usuario.id);
+    let result;
+    try {
+      result = await this.usuarioRepository.delete(usuario.id);
+    } catch {
+      throw new ConflictException(
+        'El usuario es responsable de zonas, no se puede eliminar',
+      );
+    }
     return {
       message: 'Usuario eliminado correctamente',
       data: result,
