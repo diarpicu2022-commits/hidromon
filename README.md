@@ -35,6 +35,7 @@ recurso sigue el mismo patrón de la clase: módulo, entidad, DTOs, controlador 
 ```mermaid
 erDiagram
     USUARIO ||--|| PERFIL : tiene
+    USUARIO ||--o{ ZONA : responsable
     ZONA ||--o{ SENSOR : agrupa
     SENSOR ||--o{ LECTURA : registra
     LECTURA ||--o{ ALERTA : genera
@@ -46,9 +47,9 @@ erDiagram
 | **Usuario** | `nombre`, `email`, `rol`, `perfil` | Agricultor o administrador que consulta el sistema |
 | **Perfil** | `municipio`, `finca`, `nickname`, `avatar` | Datos del usuario (relación 1 a 1) |
 | **Sensor** | `codigo`, `tipo`, `zonaId` | Dispositivo IoT de humedad de `Suelo` o `Ambiental` |
-| **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax` | Área de cultivo con sus umbrales |
+| **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax`, `usuarioId` (opcional) | Área de cultivo con sus umbrales y un usuario responsable |
 | **Lectura** | `sensorId`, `valor`, `fecha` | Una medición tomada por un sensor |
-| **Alerta** | `lecturaId`, `zonaId`, `nivel`, `mensaje` | Aviso de que una lectura quedó por encima (`Alta`) o por debajo (`Baja`) del rango |
+| **Alerta** | `lecturaId`, `zonaId`, `nivel`, `mensaje`, `resuelta` | Aviso de que una lectura quedó por encima (`Alta`) o por debajo (`Baja`) del rango |
 
 Todos los registros tienen `id` numérico, `createdAt` y `updatedAt`. Un sensor necesita una zona
 que exista, una lectura necesita un sensor que exista y una alerta necesita una lectura y una zona que existan.
@@ -79,6 +80,16 @@ Y cada uno trae una búsqueda propia:
 | `zonas` | `GET /zonas/search/:cultivo` | `/zonas/search/Papa` |
 | `lecturas` | `GET /lecturas/search/:sensorId` | `/lecturas/search/1` |
 | `alertas` | `GET /alertas/search/:nivel` | `/alertas/search/Alta` |
+
+### Alertas automáticas
+
+Al crear una lectura (`POST /lecturas`) la API la compara con el rango de la zona de su sensor:
+
+- Si queda **fuera de rango** abre una alerta `Alta` (sobre el máximo) o `Baja` (bajo el mínimo). No duplica si ya hay una abierta del mismo nivel.
+- Si **vuelve al rango**, resuelve las alertas abiertas de ese sensor.
+- La respuesta incluye `alerta` (la creada, o `null`) y `alertasResueltas`.
+
+Además: `GET /alertas?resuelta=false` lista solo las abiertas y `PATCH /alertas/:id/resolver` resuelve una a mano.
 
 ### Ejemplos
 
@@ -161,12 +172,12 @@ En `web/` hay un tablero con un invernadero 3D que consume la API y sirve para v
 
 - **Inicio:** cada **zona** es una jardinera con su medidor de humedad (marca blanca = mínimo, amarilla = máximo) y los
   **sensores** cambian de color según su última lectura (verde dentro del rango, azul por debajo, rojo por encima, gris sin
-  datos). El **cono de alerta** aparece solo si algún sensor de la zona está fuera de rango *ahora mismo* (las alertas
-  guardadas quedan en el historial). Clic en una zona o sensor para ver su detalle, editarlo, eliminarlo o enviar una
-  lectura aleatoria (si sale del rango se crea la alerta sola). A la derecha hay tarjetas de datos en tiempo real y el
+  datos). El **cono de alerta** aparece solo mientras la zona tenga alertas abiertas; al resolverse (sola o con el botón
+  «Resolver») desaparece. Clic en una zona o sensor para ver su detalle, editarlo, eliminarlo o enviar una
+  lectura aleatoria (la API abre o cierra las alertas sola). A la derecha hay tarjetas de datos en tiempo real y el
   estado del sistema.
 - **Historial:** últimas lecturas y alertas.
-- **Gestionar:** crear, editar y eliminar zonas, sensores, lecturas y alertas. Eliminar pide confirmar con un segundo
+- **Gestionar:** crear, editar y eliminar zonas (con su responsable), sensores, lecturas, alertas y usuarios; las alertas abiertas se pueden resolver desde ahí. Eliminar pide confirmar con un segundo
   clic y, si el registro tiene dependientes (por ejemplo una zona con sensores), muestra el aviso 409 de la API.
 
 ```bash
