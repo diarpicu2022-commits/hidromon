@@ -1,5 +1,5 @@
 import { PartialType } from "@nestjs/mapped-types";
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from "class-validator";
+import { ArrayUnique, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from "class-validator";
 
 export class CreateZonaDto {
 
@@ -23,6 +23,13 @@ export class CreateZonaDto {
     @IsPositive()
     @IsOptional()
     usuarioId?: number | null;
+
+    @IsArray()
+    @ArrayUnique()
+    @IsInt({ each: true })
+    @IsPositive({ each: true })
+    @IsOptional()
+    cultivoIds?: number[];
 }
 
 export class UpdateZonaDto extends PartialType(CreateZonaDto) {}
