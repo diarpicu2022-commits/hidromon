@@ -1,5 +1,5 @@
 import { PartialType } from "@nestjs/mapped-types";
-import { IsNotEmpty, IsNumber, IsPositive, IsString } from "class-validator";
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from "class-validator";
 
 export class CreateZonaDto {
 
@@ -18,6 +18,11 @@ export class CreateZonaDto {
     @IsNumber()
     @IsPositive()
     humedadMax: number;
+
+    @IsInt()
+    @IsPositive()
+    @IsOptional()
+    usuarioId?: number | null;
 }
 
 export class UpdateZonaDto extends PartialType(CreateZonaDto) {}
