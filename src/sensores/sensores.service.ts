@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Sensor } from './sensor.model';
-import { CreateSensorDto } from './sensor.dto';
+import { CreateSensorDto, UpdateSensorDto } from './sensor.dto';
 
 @Injectable()
 export class SensoresService {
+  constructor() {}
 
   private sensores: Sensor[] = [
     { id: '1', codigo: 'HS-001', tipo: 'Suelo', zonaId: '1', isActive: true },
@@ -20,70 +25,81 @@ export class SensoresService {
     { id: '12', codigo: 'HA-012', tipo: 'Ambiental', zonaId: '6', isActive: true },
     { id: '13', codigo: 'HS-013', tipo: 'Suelo', zonaId: '7', isActive: true },
     { id: '14', codigo: 'HA-014', tipo: 'Ambiental', zonaId: '7', isActive: true },
-    { id: '15', codigo: 'HS-015', tipo: 'Suelo', zonaId: '8', isActive: true }
+    { id: '15', codigo: 'HS-015', tipo: 'Suelo', zonaId: '8', isActive: true },
   ];
 
+
   findAll(): Sensor[] {
-    return this.sensores.filter(sensor => sensor.isActive);
+    // logica de negocio
+    return this.sensores.filter((sensor) => sensor.isActive);
   }
 
   findById(id: string): Sensor | undefined {
-    console.log('.:: Sensor ID:', id);
+    console.log('.:: Sensor ID: ', id);
     const sensor = this.sensores.find((sensor) => sensor.id === id);
+    console.log('.:: sensor buscado: ', sensor);
     if (sensor === undefined) {
-      // Simulacion de sensor no encontrado
+      // Simulación de sensor no encontrado, error 404
       throw new NotFoundException(`Sensor con ID ${id} no existe`);
+    }
 
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder al sensor con ID ${id}`);
+    // Simulación para error de permisos
+    if (sensor.id === '1') {
+      throw new ForbiddenException(
+        `No tienes permisos para acceder al sensor con ID ${id}`,
+      );
     }
     return sensor;
   }
 
-  findByTipo(tipo: string): Sensor[] {
-    const sensores = this.sensores.filter(sensor => sensor.tipo === tipo);
-    if (sensores.length === 0) {
-      //simulacion para el tipo de sensor no existe
+  search(tipo: string): Sensor[] {
+    const data = this.sensores.filter((sensor) => sensor.tipo === tipo);
+    if (data.length === 0) {
       throw new NotFoundException(`Sensores de tipo ${tipo} no existen`);
-
-      // Simulacion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para acceder a los sensores de tipo ${tipo}`);
     }
-    return sensores;
+    return data;
   }
 
-  create(sensorPayLoad: CreateSensorDto): Sensor {
-    const newSensor: Sensor = {
-      ...sensorPayLoad,
+  create(sensorPayload: CreateSensorDto) {
+    const newSensor = {
+      ...sensorPayload,
       id: `${new Date().getTime()}`,
-      isActive: true
+      isActive: true,
     };
     this.sensores.push(newSensor);
-    return newSensor;
+
+    return {
+      message: 'Sensor creado correctamente',
+      data: sensorPayload,
+    };
   }
 
   delete(id: string) {
-    const position = this.findPosition(id);
-    this.sensores.splice(position, 1);
-    return { msg: `Sensor eliminado correctamente` };
-  }
-
-  update(id: string, changes: CreateSensorDto) {
-    const position = this.findPosition(id);
-    const updatedSensor = { ...this.sensores[position], ...changes };
-    this.sensores[position] = updatedSensor;
-    return updatedSensor;
-  }
-
-  private findPosition(id: string): number {
     const position = this.sensores.findIndex((sensor) => sensor.id === id);
     if (position === -1) {
-      // Simulacion de sensor no encontrado
       throw new NotFoundException(`Sensor con ID ${id} no existe`);
-
-      //Simualcion para error de permisos
-      //throw new ForbiddenException(`No tienes permisos para modificar el sensor con ID ${id}`);
     }
-    return position;
+    this.sensores.splice(position, 1);
+    return {
+      msg: 'Sensor eliminado correctamente',
+    };
+  }
+
+  update(id: string, changes: UpdateSensorDto) {
+    const position = this.sensores.findIndex((sensor) => sensor.id === id);
+    if (position === -1) {
+      throw new NotFoundException(`Sensor con ID ${id} no existe`);
+    }
+    const currentData = this.sensores[position];
+    const updateSensor = {
+      ...currentData,
+      ...changes,
+    };
+    this.sensores[position] = updateSensor;
+
+    return {
+      msg: 'Sensor actualizado',
+      data: updateSensor,
+    };
   }
 }

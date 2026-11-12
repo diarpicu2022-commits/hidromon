@@ -6,8 +6,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 import { ZonasModule } from './zonas/zonas.module';
 import { LecturasModule } from './lecturas/lecturas.module';
 import { AlertasModule } from './alertas/alertas.module';
-import { SensoresController } from './sensores/sensores.controller';
-import { SensoresService } from './sensores/sensores.service';
+import { SensoresModule } from './sensores/sensores.module';
 
 @Module({
   imports: [
@@ -29,11 +28,10 @@ import { SensoresService } from './sensores/sensores.service';
       inject: [ConfigService],
     }),
     UsuariosModule,
+    SensoresModule,
     ZonasModule,
     LecturasModule,
     AlertasModule,
   ],
-  controllers: [SensoresController],
-  providers: [SensoresService],
 })
 export class AppModule {}

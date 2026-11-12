@@ -73,7 +73,7 @@ Y cada uno trae una búsqueda propia:
 | Recurso | Búsqueda | Ejemplo |
 |---|---|---|
 | `usuarios` | `GET /usuarios/search/:nombre` → devuelve el correo | `/usuarios/search/Diego Pinta` |
-| `sensores` | `GET /sensores/tipo/:tipo` | `/sensores/tipo/Suelo` |
+| `sensores` | `GET /sensores/search/:tipo` | `/sensores/search/Suelo` |
 | `zonas` | `GET /zonas/search/:cultivo` | `/zonas/search/Papa` |
 | `lecturas` | `GET /lecturas/search/:sensorId` | `/lecturas/search/1` |
 | `alertas` | `GET /alertas/search/:nivel` | `/alertas/search/Alta` |
