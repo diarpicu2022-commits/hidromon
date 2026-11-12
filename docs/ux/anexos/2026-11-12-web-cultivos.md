@@ -118,6 +118,26 @@ Se llena al terminar cada paso.
 - Zona sin cultivos (se vació la zona 3 por la API y luego se restauró): la tabla muestra «–» y el detalle «ninguno».
 - **Falla:** «ninguno» en `--muted` sobre el panel blanco da 4,05:1 a 13,5 px, por debajo de 4,5:1 (AA). Pendiente de decisión, porque corregirlo cambia el contrato.
 
+**Paso 4 (2026-11-12), verificación con Playwright y Edge a 390, 768 y 1440 px.** Scripts en el
+scratchpad de la sesión: `verificar.cjs` (cultivos), `auditar.cjs` (contraste de toda la web) y
+`bordes.cjs` (tarjetas fuera de la ventana).
+
+- Píldoras: 44 px de alto en los tres anchos. Desborde de página: 0 px en inicio, Gestionar y Cultivos.
+- Teclado: Nombre → Cultivo principal → Fresa → Lechuga → Papa → Tomate → Humedad mínima → Humedad
+  máxima → Responsable → Guardar cambios → Cancelar. La barra espaciadora marca y desmarca, y el
+  foco es un contorno sólido de 2 px.
+- Consola: sin errores. Quedan dos avisos de Three.js (`THREE.Clock` obsoleto y `PCFSoftShadowMap`
+  reemplazado) que ya estaban y no son de este cambio.
+- Contraste: esta rama sola tiene 15 pares por debajo de AA. 14 ya estaban en `develop` (tokens
+  `--muted`, `--primary` y colores de estado) y uno es mío: la pista «Marca todos los que apliquen»
+  en `--muted`, 4,05:1. Con la rama `fix/contraste-aa` fusionada quedan 0. La pista sigue la misma
+  convención de color que los `label`, así que se corrige con el token y no aquí.
+- Fallo de mi propia medición: el primer chequeo de desborde comparaba solo el ancho del documento y
+  dio 0, pero la captura a 390 px mostraba las tarjetas de Gestionar cortadas. `bordes.cjs` mide cada
+  tarjeta y confirmó que ya pasaba en `develop` (bordes en 544 px a 390 y 772 px a 768). Se arregla
+  en la rama `fix/gestionar-movil`.
+- Sin modo oscuro en la interfaz, así que no aplica la prueba de ambos temas.
+
 ## 9. Privacidad
 
 Los cultivos no son datos personales. No agregan cookies, rastreo ni datos nuevos de personas. La
