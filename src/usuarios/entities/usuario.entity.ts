@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Perfil } from "./perfil.entity";
+import { Zona } from "../../zonas/entities/zona.entity";
 
 @Entity({
     name: "usuarios",
@@ -37,4 +38,7 @@ export class Usuario {
     @OneToOne(() => Perfil, { nullable: false, cascade: true })
     @JoinColumn({ name: "perfil_id" })
     perfil: Perfil
+
+    @OneToMany(() => Zona, (zona) => zona.usuario)
+    zonas: Zona[];
 }

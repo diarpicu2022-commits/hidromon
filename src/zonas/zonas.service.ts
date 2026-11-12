@@ -18,7 +18,7 @@ export class ZonasService {
   ) {}
 
   async findAll() {
-    const zonas = await this.zonaRepository.find();
+    const zonas = await this.zonaRepository.find({ relations: { usuario: true } });
     return {
       data: zonas,
       count: zonas.length,
@@ -38,7 +38,10 @@ export class ZonasService {
   }
 
   async search(cultivo: string) {
-    const zonas = await this.zonaRepository.findBy({ cultivo });
+    const zonas = await this.zonaRepository.find({
+      where: { cultivo },
+      relations: { usuario: true },
+    });
     if (zonas.length === 0) {
       throw new NotFoundException(`Zonas con cultivo ${cultivo} no existen`);
     }
@@ -50,13 +53,19 @@ export class ZonasService {
 
   async create(zonaPayload: CreateZonaDto) {
     try {
-      const newZona = await this.zonaRepository.save(zonaPayload);
+      const { usuarioId, ...fields } = zonaPayload;
+      const newZona = await this.zonaRepository.save({
+        ...fields,
+        usuario: usuarioId ? { id: usuarioId } : null,
+      });
       return {
         message: 'Zona creada correctamente',
         data: newZona,
       };
     } catch {
-      throw new BadRequestException('Error al crear la zona');
+      throw new BadRequestException(
+        'Error al crear la zona: revisa que el usuario responsable exista',
+      );
     }
   }
 
@@ -76,16 +85,29 @@ export class ZonasService {
 
   async update(id: number, changes: UpdateZonaDto) {
     const zona = await this.findOne(id);
-    const updatedZona = this.zonaRepository.merge(zona, changes);
-    const savedZona = await this.zonaRepository.save(updatedZona);
-    return {
-      message: 'Zona actualizada correctamente',
-      data: savedZona,
-    };
+    const { usuarioId, ...fields } = changes;
+    const updatedZona = this.zonaRepository.merge(zona, fields);
+    if (usuarioId !== undefined) {
+      updatedZona.usuario = usuarioId === null ? null : ({ id: usuarioId } as Zona['usuario']);
+    }
+    try {
+      const savedZona = await this.zonaRepository.save(updatedZona);
+      return {
+        message: 'Zona actualizada correctamente',
+        data: savedZona,
+      };
+    } catch {
+      throw new BadRequestException(
+        'Error al actualizar la zona: revisa que el usuario responsable exista',
+      );
+    }
   }
 
   private async findOne(id: number) {
-    const zona = await this.zonaRepository.findOneBy({ id });
+    const zona = await this.zonaRepository.findOne({
+      where: { id },
+      relations: { usuario: true },
+    });
     if (!zona) {
       throw new NotFoundException(`Zona con ID ${id} no existe`);
     }
