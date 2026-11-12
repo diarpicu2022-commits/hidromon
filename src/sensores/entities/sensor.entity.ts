@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Zona } from "../../zonas/entities/zona.entity";
+import { Lectura } from "../../lecturas/entities/lectura.entity";
 
 @Entity({
     name: "sensores",
@@ -34,4 +35,7 @@ export class Sensor {
     @ManyToOne(() => Zona, (zona) => zona.sensores, { nullable: false })
     @JoinColumn({ name: "zona_id" })
     zona: Zona;
+
+    @OneToMany(() => Lectura, (lectura) => lectura.sensor)
+    lecturas: Lectura[];
 }
