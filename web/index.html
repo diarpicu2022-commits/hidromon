@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HidroMon · Invernadero 3D</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="panel">
+        <header>
+          <h1>💧 HidroMon</h1>
+          <p>Invernadero 3D conectado a la API</p>
+        </header>
+
+        <section id="stats" class="stats"></section>
+
+        <section>
+          <h2>Leyenda</h2>
+          <ul id="legend" class="legend"></ul>
+          <p class="hint">Marco blanco = humedad mínima, marco amarillo = máxima. El nivel de agua es el promedio de los sensores. Cilindro = sensor de suelo, esfera = ambiental.</p>
+        </section>
+
+        <section>
+          <h2>Crear datos</h2>
+          <div id="tabs" class="tabs"></div>
+          <form id="form" autocomplete="off"></form>
+        </section>
+      </aside>
+
+      <main id="scene"></main>
+
+      <section id="detail" hidden></section>
+      <div id="empty" hidden>
+        <h2>Aún no hay zonas</h2>
+        <p>Crea una zona con el panel de la izquierda; después un sensor, una lectura y una alerta.</p>
+      </div>
+      <div id="toast" role="status"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
