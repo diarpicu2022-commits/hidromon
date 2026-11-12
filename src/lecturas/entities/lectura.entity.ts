@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Sensor } from "../../sensores/entities/sensor.entity";
+import { Alerta } from "../../alertas/entities/alerta.entity";
 
 @Entity({
     name: "lecturas",
@@ -34,4 +35,7 @@ export class Lectura {
     @ManyToOne(() => Sensor, (sensor) => sensor.lecturas, { nullable: false })
     @JoinColumn({ name: "sensor_id" })
     sensor: Sensor;
+
+    @OneToMany(() => Alerta, (alerta) => alerta.lectura)
+    alertas: Alerta[];
 }
