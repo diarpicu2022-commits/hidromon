@@ -1,54 +1,46 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { CreateZonaDto } from './zona.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { CreateZonaDto, UpdateZonaDto } from './zona.dto';
 import { ZonasService } from './zonas.service';
 
 @Controller('zonas')
 export class ZonasController {
+  constructor(private zonasService: ZonasService) {}
 
-    constructor(private readonly zonasService: ZonasService) {}
+  @Get('')
+  getAllZonas() {
+    return this.zonasService.findAll();
+  }
 
-    @Get()
-    getZonas() {
-        return this.zonasService.findAll();
-    }
+  @Get(':id')
+  getZonaById(@Param('id') id: string) {
+    return this.zonasService.findById(id);
+  }
 
-    @Get('id/:id')
-    getZonaById(@Param('id') id: string) {
-        console.log('ID recibido:', id);
-        const zona = this.zonasService.findById(id);
-        console.log('Zona encontrada:', zona);
-        return zona;
-    }
+  @Get('search/:cultivo')
+  getZonasByCultivo(@Param('cultivo') cultivo: string) {
+    return this.zonasService.search(cultivo);
+  }
 
-    @Get('cultivo/:cultivo')
-    getZonasByCultivo(@Param('cultivo') cultivo: string) {
-        console.log('Cultivo recibido:', cultivo);
-        const zonas = this.zonasService.findByCultivo(cultivo);
-        console.log('Zonas encontradas:', zonas);
-        return zonas;
-    }
+  @Post()
+  createZona(@Body() zonaPayload: CreateZonaDto) {
+    return this.zonasService.create(zonaPayload);
+  }
 
-    @Post()
-    createZona(@Body() zonaPayLoad: CreateZonaDto) {
-        console.log('.:: zona: ', zonaPayLoad);
-        return this.zonasService.create(zonaPayLoad);
-    }
+  @Delete(':id')
+  deleteZona(@Param('id') id: string) {
+    return this.zonasService.delete(id);
+  }
 
-    @Delete(':id')
-    deleteZona(@Param('id') id: string) {
-        this.zonasService.delete(id);
-        return {
-            msg: "Zona eliminada correctamente"
-        }
-    }
-
-    @Put(':id')
-    updateZona(@Param('id') id: string, @Body() changes: CreateZonaDto) {
-        const updatedZona = this.zonasService.update(id, changes);
-        return {
-            msg: "Zona actualizada correctamente",
-            data: updatedZona
-        }
-    }
-
+  @Put(':id')
+  updateZona(@Param('id') id: string, @Body() changes: UpdateZonaDto) {
+    return this.zonasService.update(id, changes);
+  }
 }
