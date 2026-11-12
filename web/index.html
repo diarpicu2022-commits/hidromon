@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HidroMon · Monitoreo de humedad</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7df6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3s6 6.2 6 10.5a6 6 0 0 1-12 0C6 9.2 12 3 12 3z'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="logo" data-icon="drop"></span>
+          <div>
+            <h1>HidroMon</h1>
+            <p>Monitoreo inteligente de la humedad del suelo</p>
+          </div>
+        </div>
+        <div class="top-info">
+          <span id="online" class="online"><i></i><span>Conectando…</span></span>
+          <span id="clock" class="clock"></span>
+        </div>
+      </header>
+
+      <nav class="sidenav" id="nav">
+        <button data-view="inicio" class="active"><span data-icon="home"></span> Inicio</button>
+        <button data-view="historial"><span data-icon="history"></span> Historial</button>
+        <button data-view="crear"><span data-icon="settings"></span> Gestionar</button>
+      </nav>
+
+      <!-- INICIO -->
+      <section id="view-inicio" class="view inicio">
+        <div class="stage card" id="stage">
+          <div id="scene"></div>
+          <div class="legend-chip" id="legend"></div>
+          <div id="detail" hidden></div>
+          <div id="empty" hidden>
+            <h2>Aún no hay zonas</h2>
+            <p>Ve a «Crear datos» y crea una zona; después un sensor, una lectura y una alerta.</p>
+          </div>
+          <p class="stage-hint">Arrastra para girar · rueda para acercar · clic en una zona o sensor para ver su detalle</p>
+        </div>
+
+        <aside class="side">
+          <section class="card">
+            <div class="card-head">
+              <h2><span data-icon="chart"></span> Datos en tiempo real</h2>
+              <span class="updated"><i></i><span id="updated">–</span></span>
+            </div>
+            <div id="kpis" class="kpis"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2><span data-icon="check"></span> Estado del sistema</h2>
+              <span id="sys-badge" class="badge ok">Funcionando</span>
+            </div>
+            <ul id="sys" class="sys"></ul>
+          </section>
+        </aside>
+      </section>
+
+      <!-- HISTORIAL -->
+      <section id="view-historial" class="view historial" hidden>
+        <div class="card">
+          <div class="card-head"><h2><span data-icon="clock"></span> Últimas lecturas</h2></div>
+          <div class="table-wrap"><table id="tbl-lecturas"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2><span data-icon="alert"></span> Alertas</h2></div>
+          <div class="table-wrap"><table id="tbl-alertas"></table></div>
+        </div>
+      </section>
+
+      <!-- GESTIONAR (crear, editar y eliminar) -->
+      <section id="view-crear" class="view gestionar" hidden>
+        <div class="card list-card">
+          <div class="card-head">
+            <h2><span data-icon="settings"></span> Gestionar datos</h2>
+            <button id="btn-nuevo" class="primary small" type="button">+ Nuevo</button>
+          </div>
+          <div id="tabs" class="tabs"></div>
+          <div class="table-wrap"><table id="tbl-gestion"></table></div>
+        </div>
+        <div class="card form-card">
+          <div class="card-head"><h2 id="form-title">Nueva zona</h2></div>
+          <p class="subtle" id="form-hint"></p>
+          <form id="form" autocomplete="off"></form>
+        </div>
+      </section>
+
+      <div id="toast" role="status"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
