@@ -258,6 +258,11 @@ function row(a, b) {
   return el('tr', {}, el('td', { textContent: a }), el('td', { textContent: b }));
 }
 
+// Fila sin dato: el valor va en gris (anexo de cultivos, §5).
+function rowVacio(a, b) {
+  return el('tr', {}, el('td', { textContent: a }), el('td', { className: 'vacio', textContent: b }));
+}
+
 function renderDetail() {
   const box = $('detail');
   if (!selected) {
@@ -272,7 +277,8 @@ function renderDetail() {
     if (!z) return void (box.hidden = true);
     const table = el('table', {});
     table.append(
-      row('Cultivo', z.cultivo),
+      row('Cultivo principal', z.cultivo),
+      nombresCultivos(z) ? row('Cultivos sembrados', nombresCultivos(z)) : rowVacio('Cultivos sembrados', 'ninguno'),
       row('Rango permitido', z.humedadMin + '% – ' + z.humedadMax + '%'),
       row('Humedad promedio', z.promedio === null ? 'sin lecturas' : z.promedio.toFixed(1) + '%'),
       row('Sensores', z.sensores.length),
@@ -379,6 +385,8 @@ function renderTables() {
 
 // ---------- gestionar: crear, editar y eliminar ----------
 const nombreSensor = (s) => s.codigo + ' · ' + s.tipo;
+// Cultivos de una zona en texto, en orden alfabético.
+const nombresCultivos = (z) => (z.cultivos ?? []).map((c) => c.nombre).sort((a, b) => a.localeCompare(b, 'es')).join(', ');
 // Nombres de las zonas que tienen sembrado el cultivo, o «–» si ninguna.
 const zonasDeCultivo = (id) => raw.zonas.filter((z) => (z.cultivos ?? []).some((c) => c.id === id)).map((z) => z.nombre).join(', ') || '–';
 
@@ -389,8 +397,8 @@ const RES = {
     recurso: 'zonas',
     hint: 'Una zona es un área de cultivo con su rango de humedad.',
     lista: () => raw.zonas,
-    cabeceras: ['ID', 'Nombre', 'Cultivo', 'Rango', 'Responsable'],
-    celdas: (z) => [z.id, z.nombre, z.cultivo, z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
+    cabeceras: ['ID', 'Nombre', 'Cultivo principal', 'Cultivos sembrados', 'Rango', 'Responsable'],
+    celdas: (z) => [z.id, z.nombre, z.cultivo, nombresCultivos(z) || '–', z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
     valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '', cultivoIds: (z.cultivos ?? []).map((c) => c.id) }),
     campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },

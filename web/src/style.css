@@ -122,6 +122,7 @@ body {
 #detail table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 #detail td { padding: 5px 0; border-bottom: 1px solid var(--line); }
 #detail td:last-child { text-align: right; font-weight: 600; }
+#detail td.vacio { color: var(--muted); font-weight: 400; }
 #detail .close { float: right; background: var(--bg); border: 0; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; color: var(--muted); font-size: 16px; }
 #detail .alert-line { margin-top: 8px; padding: 6px 10px; background: var(--red-soft); color: #9b1c1c; border-radius: 8px; font-size: 12.5px; }
 #detail .actions { margin-top: 12px; }

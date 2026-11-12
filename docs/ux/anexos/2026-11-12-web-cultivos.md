@@ -103,6 +103,13 @@ Se llena al terminar cada paso.
 - Editar carga la descripción guardada y guarda el cambio. Eliminar pide «¿Seguro?» en el primer clic y borra en el segundo.
 - El título del formulario dice «Nuevo cultivo» gracias a un campo `nuevo` en la definición.
 
+**Paso 3 (2026-11-12), tabla de zonas y detalle, medido en Chrome con la API real.**
+
+- Tabla de zonas: columnas «Cultivo principal» y «Cultivos sembrados». La zona 3 muestra «Lechuga, Tomate» en orden alfabético.
+- Detalle de la zona (clic en la jardinera 3D): filas «Cultivo principal: Tomate» y «Cultivos sembrados: Lechuga, Tomate».
+- Zona sin cultivos (se vació la zona 3 por la API y luego se restauró): la tabla muestra «–» y el detalle «ninguno».
+- **Falla:** «ninguno» en `--muted` sobre el panel blanco da 4,05:1 a 13,5 px, por debajo de 4,5:1 (AA). Pendiente de decisión, porque corregirlo cambia el contrato.
+
 ## 9. Privacidad
 
 Los cultivos no son datos personales. No agregan cookies, rastreo ni datos nuevos de personas. La
