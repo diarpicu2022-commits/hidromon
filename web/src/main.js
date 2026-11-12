@@ -8,7 +8,7 @@ const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const ETIQUETA = { ok: 'Óptima', bajo: 'Baja', alto: 'Alta', sin: 'Sin datos' };
 const NIVEL_ESTADO = { Alta: 'alto', Baja: 'bajo', Media: 'warn' };
 
-let raw = { zonas: [], sensores: [], lecturas: [], alertas: [], usuarios: [] };
+let raw = { zonas: [], sensores: [], lecturas: [], alertas: [], usuarios: [], cultivos: [] };
 let zonas = [];
 let selected = null; // { type, id } en la escena
 let tab = 'zona'; // recurso que se gestiona
@@ -161,7 +161,8 @@ function renderKpis() {
   const hayAlta = abiertas.some((a) => a.nivel === 'Alta');
   const hayBaja = abiertas.some((a) => a.nivel === 'Baja');
   const nivelKpi = hayAlta ? ['alto', 'Alta'] : hayBaja ? ['bajo', 'Baja'] : ['warn', 'Media'];
-  const cultivos = new Set(raw.zonas.map((z) => z.cultivo)).size;
+  // Cultivos distintos en las zonas: el principal y los sembrados, sin repetir por nombre.
+  const cultivos = new Set(raw.zonas.flatMap((z) => [z.cultivo, ...(z.cultivos ?? []).map((c) => c.nombre)]).map((n) => n.trim().toLowerCase())).size;
 
   $('kpis').replaceChildren(
     kpi('drop', 'Humedad promedio', prom === null ? '–' : prom.toFixed(0) + ' %', badge(estado, texto), prom ?? 0),
@@ -258,6 +259,11 @@ function row(a, b) {
   return el('tr', {}, el('td', { textContent: a }), el('td', { textContent: b }));
 }
 
+// Fila sin dato: el valor va en gris (anexo de cultivos, §5).
+function rowVacio(a, b) {
+  return el('tr', {}, el('td', { textContent: a }), el('td', { className: 'vacio', textContent: b }));
+}
+
 function renderDetail() {
   const box = $('detail');
   if (!selected) {
@@ -272,7 +278,8 @@ function renderDetail() {
     if (!z) return void (box.hidden = true);
     const table = el('table', {});
     table.append(
-      row('Cultivo', z.cultivo),
+      row('Cultivo principal', z.cultivo),
+      nombresCultivos(z) ? row('Cultivos sembrados', nombresCultivos(z)) : rowVacio('Cultivos sembrados', 'ninguno'),
       row('Rango permitido', z.humedadMin + '% – ' + z.humedadMax + '%'),
       row('Humedad promedio', z.promedio === null ? 'sin lecturas' : z.promedio.toFixed(1) + '%'),
       row('Sensores', z.sensores.length),
@@ -379,6 +386,10 @@ function renderTables() {
 
 // ---------- gestionar: crear, editar y eliminar ----------
 const nombreSensor = (s) => s.codigo + ' · ' + s.tipo;
+// Cultivos de una zona en texto, en orden alfabético.
+const nombresCultivos = (z) => (z.cultivos ?? []).map((c) => c.nombre).sort((a, b) => a.localeCompare(b, 'es')).join(', ');
+// Nombres de las zonas que tienen sembrado el cultivo, o «–» si ninguna.
+const zonasDeCultivo = (id) => raw.zonas.filter((z) => (z.cultivos ?? []).some((c) => c.id === id)).map((z) => z.nombre).join(', ') || '–';
 
 const RES = {
   zona: {
@@ -387,12 +398,13 @@ const RES = {
     recurso: 'zonas',
     hint: 'Una zona es un área de cultivo con su rango de humedad.',
     lista: () => raw.zonas,
-    cabeceras: ['ID', 'Nombre', 'Cultivo', 'Rango', 'Responsable'],
-    celdas: (z) => [z.id, z.nombre, z.cultivo, z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
-    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '' }),
+    cabeceras: ['ID', 'Nombre', 'Cultivo principal', 'Cultivos sembrados', 'Rango', 'Responsable'],
+    celdas: (z) => [z.id, z.nombre, z.cultivo, nombresCultivos(z) || '–', z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
+    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '', cultivoIds: (z.cultivos ?? []).map((c) => c.id) }),
     campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
-      { name: 'cultivo', label: 'Cultivo', type: 'text', required: true },
+      { name: 'cultivo', label: 'Cultivo principal', type: 'text', required: true },
+      { name: 'cultivoIds', label: 'Cultivos sembrados', type: 'multi', hint: 'Marca todos los que apliquen', options: raw.cultivos.map((c) => [c.id, c.nombre]) },
       { name: 'humedadMin', label: 'Humedad mínima (%)', type: 'number', required: true, value: 60 },
       { name: 'humedadMax', label: 'Humedad máxima (%)', type: 'number', required: true, value: 80 },
       { name: 'usuarioId', label: 'Responsable (opcional)', type: 'select', options: [['', 'Sin responsable'], ...raw.usuarios.map((u) => [u.id, u.nombre + ' · ' + u.rol])] },
@@ -448,6 +460,21 @@ const RES = {
         { name: 'mensaje', label: 'Mensaje', type: 'text', required: true },
       ];
     },
+  },
+  cultivo: {
+    title: 'Cultivo',
+    nuevo: 'Nuevo cultivo',
+    plural: 'Cultivos',
+    recurso: 'cultivos',
+    hint: 'Catálogo de cultivos. Se asignan a las zonas desde el formulario de cada zona.',
+    lista: () => raw.cultivos,
+    cabeceras: ['ID', 'Nombre', 'Zonas'],
+    celdas: (c) => [c.id, c.nombre, zonasDeCultivo(c.id)],
+    valores: (c) => ({ nombre: c.nombre, descripcion: c.descripcion ?? '' }),
+    campos: () => [
+      { name: 'nombre', label: 'Nombre', type: 'text', required: true },
+      { name: 'descripcion', label: 'Descripción (opcional)', type: 'text' },
+    ],
   },
   usuario: {
     title: 'Usuario',
@@ -509,15 +536,48 @@ $('btn-nuevo').onclick = () => {
   $('form').querySelector('input, select')?.focus();
 };
 
+// Grupo de casillas con forma de píldora (anexo docs/ux/anexos/2026-11-12-web-cultivos.md).
+function multiField(f, marcados) {
+  const set = new Set(marcados.map(Number));
+  const fs = el('fieldset', { className: 'multi' }, el('legend', { textContent: f.label }));
+  if (!f.options.length) {
+    const ir = el('button', { type: 'button', className: 'link', textContent: 'Ir a Cultivos' });
+    ir.onclick = () => {
+      tab = 'cultivo';
+      editing = null;
+      renderTabs();
+      renderGestion();
+      renderForm(false);
+    };
+    fs.append(el('p', { className: 'multi-empty' }, 'Aún no hay cultivos. Créalos en la pestaña Cultivos. ', ...(RES.cultivo ? [ir] : [])));
+    return fs;
+  }
+  fs.append(el('p', { className: 'multi-hint', textContent: f.hint }));
+  const choices = el('div', { className: 'choices' });
+  f.options.forEach(([v, text]) => {
+    const input = el('input', { type: 'checkbox', name: f.name, value: v, checked: set.has(Number(v)) });
+    choices.append(el('label', { className: 'choice' }, input, el('span', { textContent: text })));
+  });
+  fs.append(choices);
+  return fs;
+}
+
 // Conserva lo que el usuario ya escribió cuando el refresco automático redibuja el formulario.
 function renderForm(keepValues = false) {
   const form = $('form');
   const def = RES[tab];
   const item = editing ? def.lista().find((r) => r.id === editing.id) : null;
   const inicial = item ? def.valores(item) : {};
-  const kept = keepValues ? Object.fromEntries(new FormData(form)) : {};
+  const kept = {};
+  if (keepValues) {
+    const data = new FormData(form);
+    def.campos().forEach((f) => {
+      if (f.type === 'multi') kept[f.name] = data.getAll(f.name).map(Number);
+      else if (data.has(f.name)) kept[f.name] = data.get(f.name);
+    });
+  }
 
-  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : 'Nueva ' + def.title.toLowerCase();
+  $('form-title').textContent = item ? 'Editar ' + def.title.toLowerCase() + ' #' + item.id : def.nuevo ?? 'Nueva ' + def.title.toLowerCase();
   $('form-hint').textContent = def.hint;
 
   const nodes = def.campos().map((f) => {
@@ -525,6 +585,8 @@ function renderForm(keepValues = false) {
     if (f.type === 'select') {
       input = el('select', { name: f.name });
       f.options.forEach(([v, text]) => input.append(el('option', { value: v, textContent: text })));
+    } else if (f.type === 'multi') {
+      return multiField(f, kept[f.name] ?? inicial[f.name] ?? []);
     } else if (f.type === 'check') {
       input = el('input', { name: f.name, type: 'checkbox', checked: f.value });
       return el('label', { className: 'check' }, input, f.label);
@@ -557,6 +619,10 @@ $('form').addEventListener('submit', async (e) => {
   const payload = {};
   for (const f of def.campos()) {
     if (f.type === 'check') continue;
+    if (f.type === 'multi') {
+      if (f.options.length) payload[f.name] = data.getAll(f.name).map(Number);
+      continue;
+    }
     const v = data.get(f.name);
     const numeric = f.type === 'number' || (f.type === 'select' && f.name.endsWith('Id'));
     const valor = numeric ? (v === '' ? null : Number(v)) : v;

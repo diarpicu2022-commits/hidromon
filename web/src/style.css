@@ -122,6 +122,7 @@ body {
 #detail table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 #detail td { padding: 5px 0; border-bottom: 1px solid var(--line); }
 #detail td:last-child { text-align: right; font-weight: 600; }
+#detail td.vacio { color: var(--text); font-weight: 400; }
 #detail .close { float: right; background: var(--bg); border: 0; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; color: var(--muted); font-size: 16px; }
 #detail .alert-line { margin-top: 8px; padding: 6px 10px; background: var(--red-soft); color: #9b1c1c; border-radius: 8px; font-size: 12.5px; }
 #detail .actions { margin-top: 12px; }
@@ -169,6 +170,20 @@ input, select {
 input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; background: #fff; }
 .check { display: flex; align-items: center; gap: 8px; color: var(--text); }
 .check input { width: auto; }
+/* píldoras marcables: anexo docs/ux/anexos/2026-11-12-web-cultivos.md §5 */
+fieldset.multi { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; min-width: 0; }
+fieldset.multi legend { font-size: 13px; color: var(--muted); padding: 0; margin-bottom: 5px; }
+.multi-hint, .multi-empty { margin: 0; font-size: 12.5px; color: var(--muted); }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 12px; border-radius: 99px;
+  border: 1px solid var(--line); background: #fbfdfc; color: var(--text); font-size: 14px; cursor: pointer;
+}
+.choice input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
+.choice input:focus { outline: none; }
+.choice:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: -1px; }
+.choice:has(input:checked) { background: var(--primary-soft); border-color: var(--primary); color: var(--text); font-weight: 600; }
+button.link { padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; min-height: 44px; }
 button.primary { padding: 11px 14px; border: 0; border-radius: 10px; background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(47, 125, 246, 0.3); }
 button.primary:hover { filter: brightness(1.07); }
 button.primary:disabled { opacity: 0.5; cursor: wait; }
