@@ -1,5 +1,7 @@
-import { PartialType } from "@nestjs/mapped-types";
-import { ArrayUnique, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from "class-validator";
+import { OmitType, PartialType } from "@nestjs/mapped-types";
+import { ArrayUnique, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { CreateUbicacionDto, UpdateUbicacionDto } from "./ubicacion.dto";
 
 export class CreateZonaDto {
 
@@ -30,6 +32,18 @@ export class CreateZonaDto {
     @IsPositive({ each: true })
     @IsOptional()
     cultivoIds?: number[];
+
+    @ValidateNested()
+    @Type(() => CreateUbicacionDto)
+    @IsNotEmpty()
+    ubicacion: CreateUbicacionDto;
 }
 
-export class UpdateZonaDto extends PartialType(CreateZonaDto) {}
+// Clase 7d: la ubicación va anidada. Al crear es obligatoria y al editar se corrige por partes.
+export class UpdateZonaDto extends PartialType(OmitType(CreateZonaDto, ['ubicacion'])) {
+
+    @ValidateNested()
+    @Type(() => UpdateUbicacionDto)
+    @IsOptional()
+    ubicacion?: UpdateUbicacionDto;
+}

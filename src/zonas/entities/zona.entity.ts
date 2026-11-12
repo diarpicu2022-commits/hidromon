@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Ubicacion } from "./ubicacion.entity";
 import { Sensor } from "../../sensores/entities/sensor.entity";
 import { Alerta } from "../../alertas/entities/alerta.entity";
 import { Usuario } from "../../usuarios/entities/usuario.entity";
@@ -57,4 +58,9 @@ export class Zona {
         inverseJoinColumn: { name: "cultivo_id" },
     })
     cultivos: Cultivo[];
+
+    // nullable en la base solo por las zonas creadas antes de esta relación (ver README).
+    @OneToOne(() => Ubicacion, { nullable: true, cascade: true })
+    @JoinColumn({ name: "ubicacion_id" })
+    ubicacion: Ubicacion | null;
 }

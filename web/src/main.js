@@ -286,6 +286,7 @@ function renderDetail() {
       row('Alertas activas', z.alertaActual ? z.alertaActual.nivel + ' · ' + z.alertaActual.count : 'ninguna'),
       row('Alertas resueltas', z.alertas.length - z.abiertas.length),
       row('Responsable', z.usuario?.nombre ?? 'sin asignar'),
+      row('Ubicación', z.ubicacion ? [z.ubicacion.municipio, z.ubicacion.vereda].filter(Boolean).join(' · ') + ' (' + z.ubicacion.latitud + ', ' + z.ubicacion.longitud + ')' : 'sin registrar'),
     );
     box.replaceChildren(
       close,
@@ -299,7 +300,7 @@ function renderDetail() {
     const s = z?.sensores.find((x) => x.id === selected.id);
     if (!s) return void (box.hidden = true);
     const table = el('table', {});
-    table.append(row('Zona', z.nombre), row('Tipo', s.tipo), row('Rango de la zona', z.humedadMin + '% – ' + z.humedadMax + '%'));
+    table.append(row('Zona', z.nombre), row('Tipo', s.tipo), row('Ficha técnica', s.fichaTecnica ? s.fichaTecnica.marca + ' ' + s.fichaTecnica.modelo : 'sin registrar'), row('Rango de la zona', z.humedadMin + '% – ' + z.humedadMax + '%'));
     s.lecturas.slice(0, 5).forEach((l) => table.append(row(fecha(l.fecha), l.valor + '%')));
     const btn = el('button', { className: 'ghost', textContent: 'Enviar lectura aleatoria' });
     btn.onclick = () => lecturaAleatoria(s, z, btn);
@@ -400,7 +401,7 @@ const RES = {
     lista: () => raw.zonas,
     cabeceras: ['ID', 'Nombre', 'Cultivo principal', 'Cultivos sembrados', 'Rango', 'Responsable'],
     celdas: (z) => [z.id, z.nombre, z.cultivo, nombresCultivos(z) || '–', z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
-    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '', cultivoIds: (z.cultivos ?? []).map((c) => c.id) }),
+    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '', cultivoIds: (z.cultivos ?? []).map((c) => c.id), municipio: z.ubicacion?.municipio ?? '', vereda: z.ubicacion?.vereda ?? '', latitud: z.ubicacion?.latitud ?? '', longitud: z.ubicacion?.longitud ?? '' }),
     campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'cultivo', label: 'Cultivo principal', type: 'text', required: true },
@@ -408,6 +409,10 @@ const RES = {
       { name: 'humedadMin', label: 'Humedad mínima (%)', type: 'number', required: true, value: 60 },
       { name: 'humedadMax', label: 'Humedad máxima (%)', type: 'number', required: true, value: 80 },
       { name: 'usuarioId', label: 'Responsable (opcional)', type: 'select', options: [['', 'Sin responsable'], ...raw.usuarios.map((u) => [u.id, u.nombre + ' · ' + u.rol])] },
+      { name: 'municipio', label: 'Municipio', type: 'text', required: true, grupo: 'ubicacion' },
+      { name: 'vereda', label: 'Vereda (opcional)', type: 'text', grupo: 'ubicacion' },
+      { name: 'latitud', label: 'Latitud', type: 'number', required: true, grupo: 'ubicacion' },
+      { name: 'longitud', label: 'Longitud', type: 'number', required: true, grupo: 'ubicacion' },
     ],
   },
   sensor: {
@@ -419,11 +424,15 @@ const RES = {
     lista: () => raw.sensores,
     cabeceras: ['ID', 'Código', 'Tipo', 'Zona'],
     celdas: (s) => [s.id, s.codigo, s.tipo, s.zona?.nombre ?? '–'],
-    valores: (s) => ({ codigo: s.codigo, tipo: s.tipo, zonaId: s.zona?.id }),
+    valores: (s) => ({ codigo: s.codigo, tipo: s.tipo, zonaId: s.zona?.id, marca: s.fichaTecnica?.marca ?? '', modelo: s.fichaTecnica?.modelo ?? '', numeroSerie: s.fichaTecnica?.numeroSerie ?? '', fechaInstalacion: s.fichaTecnica?.fechaInstalacion ?? '' }),
     campos: () => [
       { name: 'codigo', label: 'Código', type: 'text', required: true },
       { name: 'tipo', label: 'Tipo', type: 'select', options: ['Suelo', 'Ambiental'].map((t) => [t, t]) },
       { name: 'zonaId', label: 'Zona', type: 'select', options: raw.zonas.map((z) => [z.id, z.nombre + ' (' + z.cultivo + ')']) },
+      { name: 'marca', label: 'Marca', type: 'text', required: true, grupo: 'fichaTecnica' },
+      { name: 'modelo', label: 'Modelo', type: 'text', required: true, grupo: 'fichaTecnica' },
+      { name: 'numeroSerie', label: 'Número de serie (opcional)', type: 'text', grupo: 'fichaTecnica' },
+      { name: 'fechaInstalacion', label: 'Fecha de instalación (opcional)', type: 'date', grupo: 'fichaTecnica' },
     ],
   },
   lectura: {
@@ -625,8 +634,10 @@ $('form').addEventListener('submit', async (e) => {
     }
     const v = data.get(f.name);
     const numeric = f.type === 'number' || (f.type === 'select' && f.name.endsWith('Id'));
-    const valor = numeric ? (v === '' ? null : Number(v)) : v;
+    // Un campo opcional vacío se manda como null para que la API lo acepte (fecha, serie, vereda).
+    const valor = numeric ? (v === '' ? null : Number(v)) : v === '' && !f.required && f.type !== 'select' ? null : v;
     if (f.perfil) (payload.perfil ??= {})[f.name] = valor;
+    else if (f.grupo) (payload[f.grupo] ??= {})[f.name] = valor;
     else payload[f.name] = valor;
   }
   const submit = e.target.querySelector('button[type=submit]');

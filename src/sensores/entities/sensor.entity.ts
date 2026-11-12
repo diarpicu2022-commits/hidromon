@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { FichaTecnica } from "./ficha-tecnica.entity";
 import { Zona } from "../../zonas/entities/zona.entity";
 import { Lectura } from "../../lecturas/entities/lectura.entity";
 
@@ -38,4 +39,9 @@ export class Sensor {
 
     @OneToMany(() => Lectura, (lectura) => lectura.sensor)
     lecturas: Lectura[];
+
+    // nullable en la base solo por los sensores creados antes de esta relación (ver README).
+    @OneToOne(() => FichaTecnica, { nullable: true, cascade: true })
+    @JoinColumn({ name: "ficha_tecnica_id" })
+    fichaTecnica: FichaTecnica | null;
 }

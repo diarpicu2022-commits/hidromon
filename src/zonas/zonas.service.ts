@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateZonaDto, UpdateZonaDto } from './dtos/zona.dto';
 import { Zona } from './entities/zona.entity';
+import { Ubicacion } from './entities/ubicacion.entity';
 import { Cultivo } from '../cultivos/entities/cultivo.entity';
 
 @Injectable()
@@ -22,7 +23,7 @@ export class ZonasService {
 
   async findAll() {
     const zonas = await this.zonaRepository.find({
-      relations: { usuario: true, cultivos: true },
+      relations: { usuario: true, cultivos: true, ubicacion: true },
     });
     return {
       data: zonas,
@@ -45,7 +46,7 @@ export class ZonasService {
   async search(cultivo: string) {
     const zonas = await this.zonaRepository.find({
       where: { cultivo },
-      relations: { usuario: true, cultivos: true },
+      relations: { usuario: true, cultivos: true, ubicacion: true },
     });
     if (zonas.length === 0) {
       throw new NotFoundException(`Zonas con cultivo ${cultivo} no existen`);
@@ -79,7 +80,11 @@ export class ZonasService {
   async delete(id: number) {
     const zona = await this.findOne(id);
     try {
-      await this.zonaRepository.delete(zona.id);
+      // Zona y ubicación en una transacción: si la zona tiene sensores o alertas no se borra nada.
+      await this.zonaRepository.manager.transaction(async (manager) => {
+        await manager.delete(Zona, zona.id);
+        if (zona.ubicacion) await manager.delete(Ubicacion, zona.ubicacion.id);
+      });
     } catch {
       throw new ConflictException(
         'La zona tiene sensores o alertas asociados, no se puede eliminar',
@@ -92,8 +97,12 @@ export class ZonasService {
 
   async update(id: number, changes: UpdateZonaDto) {
     const zona = await this.findOne(id);
-    const { usuarioId, cultivoIds, ...fields } = changes;
+    const { usuarioId, cultivoIds, ubicacion, ...fields } = changes;
     const updatedZona = this.zonaRepository.merge(zona, fields);
+    // La ubicación se corrige por partes. Una zona vieja sin ubicación la recibe completa.
+    if (ubicacion) {
+      updatedZona.ubicacion = Object.assign(zona.ubicacion ?? {}, ubicacion) as Ubicacion;
+    }
     if (usuarioId !== undefined) {
       updatedZona.usuario = usuarioId === null ? null : ({ id: usuarioId } as Zona['usuario']);
     }
@@ -117,7 +126,7 @@ export class ZonasService {
   private async findOne(id: number) {
     const zona = await this.zonaRepository.findOne({
       where: { id },
-      relations: { usuario: true, cultivos: true },
+      relations: { usuario: true, cultivos: true, ubicacion: true },
     });
     if (!zona) {
       throw new NotFoundException(`Zona con ID ${id} no existe`);

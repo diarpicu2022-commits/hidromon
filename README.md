@@ -41,14 +41,18 @@ erDiagram
     LECTURA ||--o{ ALERTA : genera
     ZONA ||--o{ ALERTA : recibe
     ZONA }o--o{ CULTIVO : siembra
+    SENSOR ||--o| FICHA_TECNICA : describe
+    ZONA ||--o| UBICACION : ubica
 ```
 
 | Entidad | Campos | Qué representa |
 |---|---|---|
 | **Usuario** | `nombre`, `email`, `rol`, `perfil` | Agricultor o administrador que consulta el sistema |
 | **Perfil** | `municipio`, `finca`, `nickname`, `avatar` | Datos del usuario (relación 1 a 1) |
-| **Sensor** | `codigo`, `tipo`, `zonaId` | Dispositivo IoT de humedad de `Suelo` o `Ambiental` |
-| **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax`, `usuarioId` (opcional), `cultivoIds` (opcional) | Área de cultivo con sus umbrales, un usuario responsable y los cultivos sembrados |
+| **Sensor** | `codigo`, `tipo`, `zonaId`, `fichaTecnica` | Dispositivo IoT de humedad de `Suelo` o `Ambiental` |
+| **Ficha técnica** | `marca`, `modelo`, `numeroSerie` (opcional), `fechaInstalacion` (opcional) | Datos del equipo del sensor (relación 1 a 1, se envía anidada) |
+| **Zona** | `nombre`, `cultivo`, `humedadMin`, `humedadMax`, `usuarioId` (opcional), `cultivoIds` (opcional), `ubicacion` | Área de cultivo con sus umbrales, un usuario responsable y los cultivos sembrados |
+| **Ubicación** | `municipio`, `vereda` (opcional), `latitud` (−90 a 90), `longitud` (−180 a 180) | Dónde está la zona (relación 1 a 1, se envía anidada) |
 | **Cultivo** | `nombre` (único), `descripcion` (opcional) | Catálogo de cultivos. Una zona tiene varios cultivos y un cultivo está en varias zonas (relación muchos a muchos en la tabla `zonas_cultivos`) |
 | **Lectura** | `sensorId`, `valor`, `fecha` | Una medición tomada por un sensor |
 | **Alerta** | `lecturaId`, `zonaId`, `nivel`, `mensaje`, `resuelta` | Aviso de que una lectura quedó por encima (`Alta`) o por debajo (`Baja`) del rango |
@@ -120,17 +124,17 @@ Además: `GET /alertas?resuelta=false` lista solo las abiertas y `PATCH /alertas
 **Crear una zona**
 
 ```bash
-curl -X POST http://localhost:3000/zonas   -H "Content-Type: application/json"   -d '{"nombre":"Lote Nuevo","cultivo":"Papa","humedadMin":60,"humedadMax":80}'
+curl -X POST http://localhost:3000/zonas   -H "Content-Type: application/json"   -d '{"nombre":"Lote Nuevo","cultivo":"Papa","humedadMin":60,"humedadMax":80,"ubicacion":{"municipio":"Ipiales","vereda":"Las Lajas","latitud":0.81,"longitud":-77.6}}'
 ```
 
 ```json
-{ "message": "Zona creada correctamente", "data": { "id": 3, "nombre": "Lote Nuevo", "cultivo": "Papa", "humedadMin": 60, "humedadMax": 80, "createdAt": "2026-11-12T06:37:44.766Z", "updatedAt": "2026-11-12T06:37:44.766Z" } }
+{ "message": "Zona creada correctamente", "data": { "nombre": "Lote Nuevo", "cultivo": "Papa", "humedadMin": 60, "humedadMax": 80, "ubicacion": { "municipio": "Ipiales", "vereda": "Las Lajas", "latitud": 0.81, "longitud": -77.6, "id": 2 }, "id": 6 } }
 ```
 
 **Crear un sensor en esa zona**
 
 ```bash
-curl -X POST http://localhost:3000/sensores   -H "Content-Type: application/json"   -d '{"codigo":"HS-001","tipo":"Suelo","zonaId":3}'
+curl -X POST http://localhost:3000/sensores   -H "Content-Type: application/json"   -d '{"codigo":"HS-001","tipo":"Suelo","zonaId":6,"fichaTecnica":{"marca":"Resistivo","modelo":"YL-69","fechaInstalacion":"2026-11-01"}}'
 ```
 
 **Actualizar una lectura**
@@ -239,7 +243,9 @@ src/
 
 - Las tablas se crean solas con `synchronize: true`. Sirve para desarrollo y clase; para producción habría que usar migraciones.
 - Al empezar la base está vacía: crea primero una zona, luego un sensor, una lectura y una alerta, en ese orden (cada una necesita la anterior).
-- `npm run test` no arranca con la configuración actual: NestJS 12 se distribuye como ES Module y el Jest de la plantilla no lo carga con Node anteriores a 24.9. Le pasa igual a la plantilla de la práctica.
+- La ficha técnica y la ubicación son obligatorias al crear (el DTO las exige), pero sus columnas `ficha_tecnica_id` y `ubicacion_id` admiten vacío en la base. Así `synchronize` no falla con los sensores y zonas creados antes de esta relación. Esos registros viejos muestran «sin registrar» y reciben la ficha o la ubicación completa la primera vez que se editan.
+- Al editar, la ficha y la ubicación se corrigen por partes, como el perfil del usuario en la Clase 7d: `PUT /sensores/:id` con `{"fichaTecnica":{"modelo":"YL-69 v2"}}` solo cambia el modelo.
+- Al borrar un sensor o una zona se borra también su ficha o su ubicación, en la misma transacción. Si el borrado falla (409), no se borra nada.
 
 ## 🤝 Cómo contribuir
 
