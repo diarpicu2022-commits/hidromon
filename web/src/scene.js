@@ -101,7 +101,7 @@ export function createScene(container, onSelect) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoftShadowMap ya no existe en three 0.187
   container.appendChild(renderer.domElement);
 
   // Reflejos suaves de un entorno de estudio: da volumen a los materiales
@@ -417,9 +417,14 @@ export function createScene(container, onSelect) {
     labels.domElement.style.cursor = ray.intersectObjects(clickable, false).length ? 'pointer' : 'grab';
   });
 
-  const clock = new THREE.Clock();
-  renderer.setAnimationLoop(() => {
-    const t = clock.getElapsedTime();
+  // THREE.Clock quedó obsoleto: Timer se actualiza con el tiempo que entrega el bucle.
+  const timer = new THREE.Timer();
+  timer.connect(document);
+  // Con «reducir movimiento» el cono de alerta y los sensores se quedan quietos.
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)');
+  renderer.setAnimationLoop((timestamp) => {
+    timer.update(timestamp);
+    const t = quieto.matches ? 0 : timer.getElapsed();
     for (const c of pulsing) {
       if (c.geometry.type === 'ConeGeometry') {
         c.position.y = 6.4 + Math.sin(t * 3) * 0.2;
