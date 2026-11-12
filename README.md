@@ -73,6 +73,8 @@ Los cinco recursos comparten las mismas rutas:
 
 > En los cinco recursos `GET /{recurso}/1` responde **403 a propósito** (simulación de permisos vista en clase), y el id debe ser numérico: `GET /{recurso}/abc` responde 400.
 
+> Como en la Clase 7c, el `ValidationPipe` usa `whitelist` y `forbidNonWhitelisted`: un campo que no esté en el DTO responde 400 (`"property hackeado should not exist"`). Y como en la 7d, `PUT /usuarios/:id` acepta campos sueltos y el perfil anidado: `{"perfil":{"finca":"El Rosal Alto"}}` solo corrige la finca.
+
 Y cada uno trae una búsqueda propia:
 
 | Recurso | Búsqueda | Ejemplo |
