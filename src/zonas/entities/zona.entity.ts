@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Sensor } from "../../sensores/entities/sensor.entity";
 
 @Entity({
     name: "zonas",
@@ -35,4 +36,7 @@ export class Zona {
             name: "updated_at"
         })
     updatedAt: Date;
+
+    @OneToMany(() => Sensor, (sensor) => sensor.zona)
+    sensores: Sensor[];
 }
