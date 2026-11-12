@@ -159,13 +159,15 @@ La API queda en `http://localhost:3000`. Para usar otro puerto: `PORT=4000 npm r
 
 En `web/` hay un tablero con un invernadero 3D que consume la API y sirve para ver cómo funciona todo junto.
 
-- **Inicio:** cada **zona** es una jardinera con su medidor de humedad (marca blanca = mínimo, amarilla = máximo);
-  los **sensores** cambian de color según su última lectura (verde dentro del rango, azul por debajo, rojo por encima,
-  gris sin datos) y las **alertas** aparecen como un cono sobre la zona. Clic en una zona o sensor para ver su detalle
-  y enviar una lectura aleatoria (si sale del rango se crea la alerta sola). A la derecha hay tarjetas de datos en
-  tiempo real y el estado del sistema.
+- **Inicio:** cada **zona** es una jardinera con su medidor de humedad (marca blanca = mínimo, amarilla = máximo) y los
+  **sensores** cambian de color según su última lectura (verde dentro del rango, azul por debajo, rojo por encima, gris sin
+  datos). El **cono de alerta** aparece solo si algún sensor de la zona está fuera de rango *ahora mismo* (las alertas
+  guardadas quedan en el historial). Clic en una zona o sensor para ver su detalle, editarlo, eliminarlo o enviar una
+  lectura aleatoria (si sale del rango se crea la alerta sola). A la derecha hay tarjetas de datos en tiempo real y el
+  estado del sistema.
 - **Historial:** últimas lecturas y alertas.
-- **Crear datos:** formularios para crear zonas, sensores, lecturas y alertas.
+- **Gestionar:** crear, editar y eliminar zonas, sensores, lecturas y alertas. Eliminar pide confirmar con un segundo
+  clic y, si el registro tiene dependientes (por ejemplo una zona con sensores), muestra el aviso 409 de la API.
 
 ```bash
 # con la API corriendo en el puerto 3000
