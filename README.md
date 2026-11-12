@@ -76,7 +76,7 @@ Y cada uno trae una búsqueda propia:
 | `sensores` | `GET /sensores/tipo/:tipo` | `/sensores/tipo/Suelo` |
 | `zonas` | `GET /zonas/cultivo/:cultivo` | `/zonas/cultivo/Papa` |
 | `lecturas` | `GET /lecturas/sensor/:sensorId` | `/lecturas/sensor/1` |
-| `alertas` | `GET /alertas/nivel/:nivel` | `/alertas/nivel/Alta` |
+| `alertas` | `GET /alertas/search/:nivel` | `/alertas/search/Alta` |
 
 ### Ejemplos
 
