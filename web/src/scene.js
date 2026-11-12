@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { ESTADOS, alertaMasGrave } from './model.js';
+import { ESTADOS } from './model.js';
 
 const PARCELA = 6; // lado útil de cada jardinera
 const SEPARACION = 10.5;
@@ -202,10 +202,11 @@ export function createScene(container, onSelect) {
     });
   }
 
+  // Cono de alerta: solo aparece si algún sensor de la zona está fuera de rango AHORA.
   function alerta(g, zona) {
-    const grave = alertaMasGrave(zona.alertas);
-    if (!grave) return;
-    const color = COLOR_NIVEL[grave.nivel] ?? 0xef4444;
+    const actual = zona.alertaActual;
+    if (!actual) return;
+    const color = COLOR_NIVEL[actual.nivel] ?? 0xef4444;
     const cono = new THREE.Mesh(
       new THREE.ConeGeometry(0.55, 1.1, 24),
       new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.7 }),
@@ -215,8 +216,8 @@ export function createScene(container, onSelect) {
     cono.castShadow = true;
     g.add(cono);
     pulsing.push(cono);
-    const extra = zona.alertas.length > 1 ? ' · ' + zona.alertas.length : '';
-    const tag = pill('<b>⚠ Alerta ' + esc(grave.nivel) + extra + '</b>', 'alerta');
+    const extra = actual.count > 1 ? ' · ' + actual.count + ' sensores' : '';
+    const tag = pill('<b>⚠ ' + esc(actual.nivel) + extra + '</b>', 'alerta');
     tag.position.set(0, 1, 0);
     cono.add(tag);
   }
