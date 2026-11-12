@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
-import { CultivosService } from './cultivos.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CultivosController } from './cultivos.controller';
+import { CultivosService } from './cultivos.service';
+import { Cultivo } from './entities/cultivo.entity';
 
 @Module({
-  controllers: [CultivosController],
-  providers: [CultivosService],
+    imports: [TypeOrmModule.forFeature([Cultivo])],
+    controllers: [CultivosController],
+    providers: [CultivosService],
 })
 export class CultivosModule {}

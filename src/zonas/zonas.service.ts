@@ -6,19 +6,24 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateZonaDto, UpdateZonaDto } from './dtos/zona.dto';
 import { Zona } from './entities/zona.entity';
+import { Cultivo } from '../cultivos/entities/cultivo.entity';
 
 @Injectable()
 export class ZonasService {
   constructor(
     @InjectRepository(Zona)
     private zonaRepository: Repository<Zona>,
+    @InjectRepository(Cultivo)
+    private cultivoRepository: Repository<Cultivo>,
   ) {}
 
   async findAll() {
-    const zonas = await this.zonaRepository.find({ relations: { usuario: true } });
+    const zonas = await this.zonaRepository.find({
+      relations: { usuario: true, cultivos: true },
+    });
     return {
       data: zonas,
       count: zonas.length,
@@ -40,7 +45,7 @@ export class ZonasService {
   async search(cultivo: string) {
     const zonas = await this.zonaRepository.find({
       where: { cultivo },
-      relations: { usuario: true },
+      relations: { usuario: true, cultivos: true },
     });
     if (zonas.length === 0) {
       throw new NotFoundException(`Zonas con cultivo ${cultivo} no existen`);
@@ -52,11 +57,13 @@ export class ZonasService {
   }
 
   async create(zonaPayload: CreateZonaDto) {
+    const { usuarioId, cultivoIds, ...fields } = zonaPayload;
+    const cultivos = await this.findCultivos(cultivoIds ?? []);
     try {
-      const { usuarioId, ...fields } = zonaPayload;
       const newZona = await this.zonaRepository.save({
         ...fields,
         usuario: usuarioId ? { id: usuarioId } : null,
+        cultivos,
       });
       return {
         message: 'Zona creada correctamente',
@@ -85,10 +92,14 @@ export class ZonasService {
 
   async update(id: number, changes: UpdateZonaDto) {
     const zona = await this.findOne(id);
-    const { usuarioId, ...fields } = changes;
+    const { usuarioId, cultivoIds, ...fields } = changes;
     const updatedZona = this.zonaRepository.merge(zona, fields);
     if (usuarioId !== undefined) {
       updatedZona.usuario = usuarioId === null ? null : ({ id: usuarioId } as Zona['usuario']);
+    }
+    // Si llegan cultivoIds, reemplazan la lista completa de cultivos de la zona.
+    if (cultivoIds !== undefined) {
+      updatedZona.cultivos = await this.findCultivos(cultivoIds);
     }
     try {
       const savedZona = await this.zonaRepository.save(updatedZona);
@@ -106,11 +117,24 @@ export class ZonasService {
   private async findOne(id: number) {
     const zona = await this.zonaRepository.findOne({
       where: { id },
-      relations: { usuario: true },
+      relations: { usuario: true, cultivos: true },
     });
     if (!zona) {
       throw new NotFoundException(`Zona con ID ${id} no existe`);
     }
     return zona;
+  }
+
+  private async findCultivos(ids: number[]) {
+    if (ids.length === 0) {
+      return [];
+    }
+    const cultivos = await this.cultivoRepository.findBy({ id: In(ids) });
+    if (cultivos.length !== ids.length) {
+      const encontrados = cultivos.map((cultivo) => cultivo.id);
+      const faltan = ids.filter((id) => !encontrados.includes(id));
+      throw new BadRequestException(`Cultivos con ID ${faltan.join(', ')} no existen`);
+    }
+    return cultivos;
   }
 }

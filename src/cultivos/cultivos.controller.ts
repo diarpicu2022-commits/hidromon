@@ -1,34 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { CreateCultivoDto, UpdateCultivoDto } from './dtos/cultivo.dto';
 import { CultivosService } from './cultivos.service';
-import { CreateCultivoDto } from './dto/create-cultivo.dto';
-import { UpdateCultivoDto } from './dto/update-cultivo.dto';
 
 @Controller('cultivos')
 export class CultivosController {
-  constructor(private readonly cultivosService: CultivosService) {}
+  constructor(private cultivosService: CultivosService) {}
 
-  @Post()
-  create(@Body() createCultivoDto: CreateCultivoDto) {
-    return this.cultivosService.create(createCultivoDto);
-  }
-
-  @Get()
-  findAll() {
+  @Get('')
+  getAllCultivos() {
     return this.cultivosService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.cultivosService.findOne(+id);
+  getCultivoById(@Param('id', ParseIntPipe) id: number) {
+    return this.cultivosService.findById(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCultivoDto: UpdateCultivoDto) {
-    return this.cultivosService.update(+id, updateCultivoDto);
+  @Post()
+  createCultivo(@Body() cultivoPayload: CreateCultivoDto) {
+    return this.cultivosService.create(cultivoPayload);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.cultivosService.remove(+id);
+  deleteCultivo(@Param('id', ParseIntPipe) id: number) {
+    return this.cultivosService.delete(id);
+  }
+
+  @Put(':id')
+  updateCultivo(@Param('id', ParseIntPipe) id: number, @Body() changes: UpdateCultivoDto) {
+    return this.cultivosService.update(id, changes);
   }
 }
