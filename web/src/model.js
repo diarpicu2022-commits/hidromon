@@ -40,15 +40,15 @@ export function buildWorld({ zonas, sensores, lecturas, alertas }) {
       });
     const valores = sensoresZona.filter((s) => s.ultima).map((s) => s.ultima.valor);
     const promedio = valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
-    // Alerta ACTUAL: depende de la última lectura de cada sensor, no del historial guardado.
-    const fuera = sensoresZona.filter((s) => s.estado === 'alto' || s.estado === 'bajo');
-    const hayAlto = fuera.some((s) => s.estado === 'alto');
-    const alertaActual = fuera.length ? { nivel: hayAlto ? 'Alta' : 'Baja', count: fuera.length } : null;
+    // Alertas abiertas (sin resolver) de la zona: así lo decide la API, no el navegador.
+    const abiertas = alertas.filter((a) => a.zona?.id === zona.id && !a.resuelta);
+    const alertaActual = abiertas.length ? { nivel: alertaMasGrave(abiertas).nivel, count: abiertas.length } : null;
     return {
       ...zona,
       alertaActual,
       sensores: sensoresZona,
       alertas: alertas.filter((a) => a.zona?.id === zona.id),
+      abiertas,
       promedio,
       estado: estadoDe(promedio, zona),
     };

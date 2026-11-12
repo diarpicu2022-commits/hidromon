@@ -19,6 +19,8 @@ export const api = {
   sensores: () => request('/sensores'),
   lecturas: () => request('/lecturas'),
   alertas: () => request('/alertas'),
+  usuarios: () => request('/usuarios'),
+  resolverAlerta: (id) => request('/alertas/' + id + '/resolver', { method: 'PATCH' }),
   create: (recurso, payload) =>
     request(`/${recurso}`, { method: 'POST', body: JSON.stringify(payload) }),
   update: (recurso, id, payload) =>
@@ -27,17 +29,19 @@ export const api = {
 
   // Trae los cuatro recursos y los deja listos para dibujar.
   async snapshot() {
-    const [zonas, sensores, lecturas, alertas] = await Promise.all([
+    const [zonas, sensores, lecturas, alertas, usuarios] = await Promise.all([
       this.zonas(),
       this.sensores(),
       this.lecturas(),
       this.alertas(),
+      this.usuarios(),
     ]);
     return {
       zonas: zonas.data,
       sensores: sensores.data,
       lecturas: lecturas.data, // vienen de la más reciente a la más antigua
       alertas: alertas.data,
+      usuarios: usuarios.data,
     };
   },
 };

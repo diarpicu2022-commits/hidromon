@@ -8,7 +8,7 @@ const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const ETIQUETA = { ok: 'Óptima', bajo: 'Baja', alto: 'Alta', sin: 'Sin datos' };
 const NIVEL_ESTADO = { Alta: 'alto', Baja: 'bajo', Media: 'warn' };
 
-let raw = { zonas: [], sensores: [], lecturas: [], alertas: [] };
+let raw = { zonas: [], sensores: [], lecturas: [], alertas: [], usuarios: [] };
 let zonas = [];
 let selected = null; // { type, id } en la escena
 let tab = 'zona'; // recurso que se gestiona
@@ -156,14 +156,17 @@ function renderKpis() {
     else [estado, texto] = ['warn', 'Atención'];
   }
 
-  // Alertas activas = sensores cuya última lectura está fuera de rango ahora mismo
-  const activas = bajos + altos;
+  // Alertas activas = alertas abiertas (sin resolver) que guarda la API
+  const abiertas = raw.alertas.filter((a) => !a.resuelta);
+  const hayAlta = abiertas.some((a) => a.nivel === 'Alta');
+  const hayBaja = abiertas.some((a) => a.nivel === 'Baja');
+  const nivelKpi = hayAlta ? ['alto', 'Alta'] : hayBaja ? ['bajo', 'Baja'] : ['warn', 'Media'];
   const cultivos = new Set(raw.zonas.map((z) => z.cultivo)).size;
 
   $('kpis').replaceChildren(
     kpi('drop', 'Humedad promedio', prom === null ? '–' : prom.toFixed(0) + ' %', badge(estado, texto), prom ?? 0),
     kpi('sensor', 'Sensores en rango', enRango + '/' + todos.length, undefined, todos.length ? (enRango / todos.length) * 100 : 0),
-    kpi('bell', 'Alertas activas', String(activas), activas ? badge(altos ? 'alto' : 'bajo', altos ? 'Alta' : 'Baja') : badge('ok', 'Todo en rango'), undefined, raw.alertas.length + ' en el historial'),
+    kpi('bell', 'Alertas activas', String(abiertas.length), abiertas.length ? badge(...nivelKpi) : badge('ok', 'Todo en rango'), undefined, raw.alertas.length - abiertas.length + ' resueltas'),
     kpi('sprout', 'Zonas', String(raw.zonas.length), el('small', { textContent: cultivos + (cultivos === 1 ? ' cultivo' : ' cultivos') })),
   );
 }
@@ -171,13 +174,13 @@ function renderKpis() {
 // ---------- estado del sistema ----------
 function renderSystem() {
   const sensoresConDatos = zonas.flatMap((z) => z.sensores).filter((s) => s.ultima).length;
-  const activas = zonas.reduce((n, z) => n + (z.alertaActual?.count ?? 0), 0);
+  const activas = raw.alertas.filter((a) => !a.resuelta).length;
   const filas = [
     ['globe', 'Conexión API (HidroMon)', online ? 'Conectado' : 'Sin conexión', online ? 'ok' : 'alto'],
     ['database', 'Base de datos (Postgres)', online ? 'OK' : 'Sin respuesta', online ? 'ok' : 'alto'],
     ['sensor', 'Sensores con lecturas', sensoresConDatos + ' de ' + raw.sensores.length, sensoresConDatos ? 'ok' : 'sin'],
     ['sprout', 'Zonas registradas', String(raw.zonas.length), raw.zonas.length ? 'ok' : 'sin'],
-    ['bell', 'Alertas activas', activas ? activas + ' ahora' : 'Ninguna', activas ? 'alto' : 'ok'],
+    ['bell', 'Alertas activas', activas ? activas + (activas === 1 ? ' abierta' : ' abiertas') : 'Ninguna', activas ? 'alto' : 'ok'],
   ];
   const color = { ok: 'var(--green)', alto: 'var(--red)', sin: 'var(--grey)' };
   $('sys').replaceChildren(
@@ -214,6 +217,22 @@ function deleteButton(recurso, id, nombre, onDone) {
       b.disabled = false;
       b.classList.remove('confirm');
       b.textContent = 'Eliminar';
+    }
+  };
+  return b;
+}
+
+function resolverButton(id) {
+  const b = el('button', { className: 'mini', type: 'button', textContent: 'Resolver' });
+  b.onclick = async () => {
+    b.disabled = true;
+    try {
+      const res = await api.resolverAlerta(id);
+      toast(res.message);
+      await refresh();
+    } catch (err) {
+      toast(err.message, 'error');
+      b.disabled = false;
     }
   };
   return b;
@@ -258,7 +277,8 @@ function renderDetail() {
       row('Humedad promedio', z.promedio === null ? 'sin lecturas' : z.promedio.toFixed(1) + '%'),
       row('Sensores', z.sensores.length),
       row('Alertas activas', z.alertaActual ? z.alertaActual.nivel + ' · ' + z.alertaActual.count : 'ninguna'),
-      row('Alertas en el historial', z.alertas.length),
+      row('Alertas resueltas', z.alertas.length - z.abiertas.length),
+      row('Responsable', z.usuario?.nombre ?? 'sin asignar'),
     );
     box.replaceChildren(
       close,
@@ -294,8 +314,7 @@ async function lecturaAleatoria(sensor, zona, btn) {
   btn.disabled = true;
   try {
     const res = await api.create('lecturas', { sensorId: sensor.id, valor: Math.max(0, Math.min(100, valor)) });
-    toast('Lectura creada: ' + res.data.valor + '%');
-    await alertaAutomatica(res.data, zona);
+    avisoLectura(res);
     await refresh();
   } catch (err) {
     toast(err.message, 'error');
@@ -304,16 +323,11 @@ async function lecturaAleatoria(sensor, zona, btn) {
   }
 }
 
-async function alertaAutomatica(lectura, zona) {
-  const nivel = lectura.valor > zona.humedadMax ? 'Alta' : lectura.valor < zona.humedadMin ? 'Baja' : null;
-  if (!nivel) return;
-  await api.create('alertas', {
-    lecturaId: lectura.id,
-    zonaId: zona.id,
-    nivel,
-    mensaje: 'Humedad ' + lectura.valor + '% fuera del rango ' + zona.humedadMin + '–' + zona.humedadMax + '%',
-  });
-  toast('Lectura fuera de rango: se creó una alerta ' + nivel, 'error');
+// La API decide si hay que abrir o cerrar alertas; aquí solo se avisa al usuario.
+function avisoLectura(res) {
+  if (res.alerta) toast('Lectura fuera de rango: la API abrió una alerta ' + res.alerta.nivel, 'error');
+  else if (res.alertasResueltas) toast('Lectura en rango: se resolvieron ' + res.alertasResueltas + ' alerta(s) del sensor');
+  else toast('Lectura creada: ' + res.data.valor + '%');
 }
 
 // ---------- historial (solo lectura) ----------
@@ -322,6 +336,10 @@ function tabla(id, cabeceras, filas) {
     el('thead', {}, el('tr', {}, ...cabeceras.map((c) => el('th', { textContent: c })))),
     el('tbody', {}, ...(filas.length ? filas : [el('tr', {}, el('td', { colSpan: cabeceras.length, textContent: 'Sin registros todavía' }))])),
   );
+}
+
+function estadoAlerta(a) {
+  return a.resuelta ? badge('ok', 'Resuelta') : badge('alto', 'Activa');
 }
 
 function estadoLectura(l) {
@@ -352,9 +370,9 @@ function renderTables() {
   );
   tabla(
     'tbl-alertas',
-    ['Fecha', 'Nivel', 'Zona', 'Mensaje'],
+    ['Fecha', 'Nivel', 'Zona', 'Estado', 'Mensaje'],
     raw.alertas.slice(0, 25).map((a) =>
-      el('tr', {}, el('td', { textContent: fecha(a.createdAt) }), el('td', {}, badge(NIVEL_ESTADO[a.nivel] ?? 'warn', a.nivel)), el('td', { textContent: a.zona?.nombre ?? '–' }), el('td', { textContent: a.mensaje })),
+      el('tr', {}, el('td', { textContent: fecha(a.createdAt) }), el('td', {}, badge(NIVEL_ESTADO[a.nivel] ?? 'warn', a.nivel)), el('td', { textContent: a.zona?.nombre ?? '–' }), el('td', {}, estadoAlerta(a)), el('td', { textContent: a.mensaje })),
     ),
   );
 }
@@ -369,14 +387,15 @@ const RES = {
     recurso: 'zonas',
     hint: 'Una zona es un área de cultivo con su rango de humedad.',
     lista: () => raw.zonas,
-    cabeceras: ['ID', 'Nombre', 'Cultivo', 'Rango'],
-    celdas: (z) => [z.id, z.nombre, z.cultivo, z.humedadMin + '–' + z.humedadMax + '%'],
-    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax }),
+    cabeceras: ['ID', 'Nombre', 'Cultivo', 'Rango', 'Responsable'],
+    celdas: (z) => [z.id, z.nombre, z.cultivo, z.humedadMin + '–' + z.humedadMax + '%', z.usuario?.nombre ?? '–'],
+    valores: (z) => ({ nombre: z.nombre, cultivo: z.cultivo, humedadMin: z.humedadMin, humedadMax: z.humedadMax, usuarioId: z.usuario?.id ?? '' }),
     campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'cultivo', label: 'Cultivo', type: 'text', required: true },
       { name: 'humedadMin', label: 'Humedad mínima (%)', type: 'number', required: true, value: 60 },
       { name: 'humedadMax', label: 'Humedad máxima (%)', type: 'number', required: true, value: 80 },
+      { name: 'usuarioId', label: 'Responsable (opcional)', type: 'select', options: [['', 'Sin responsable'], ...raw.usuarios.map((u) => [u.id, u.nombre + ' · ' + u.rol])] },
     ],
   },
   sensor: {
@@ -406,7 +425,6 @@ const RES = {
     campos: () => [
       { name: 'sensorId', label: 'Sensor', type: 'select', options: raw.sensores.map((s) => [s.id, nombreSensor(s)]) },
       { name: 'valor', label: 'Valor de humedad (%)', type: 'number', required: true, value: 70 },
-      ...(editing ? [] : [{ name: 'auto', label: 'Crear alerta si sale del rango', type: 'check', value: true }]),
     ],
   },
   alerta: {
@@ -415,8 +433,9 @@ const RES = {
     recurso: 'alertas',
     hint: 'Una alerta se asocia a una lectura y a una zona que ya existan.',
     lista: () => raw.alertas,
-    cabeceras: ['ID', 'Nivel', 'Zona', 'Mensaje'],
-    celdas: (a) => [a.id, a.nivel, a.zona?.nombre ?? '–', a.mensaje],
+    cabeceras: ['ID', 'Nivel', 'Zona', 'Estado', 'Mensaje'],
+    celdas: (a) => [a.id, a.nivel, a.zona?.nombre ?? '–', a.resuelta ? 'Resuelta' : 'Activa', a.mensaje],
+    extra: (a) => (a.resuelta ? [] : [resolverButton(a.id)]),
     valores: (a) => ({ lecturaId: a.lectura?.id, zonaId: a.zona?.id, nivel: a.nivel, mensaje: a.mensaje }),
     campos: () => {
       const actual = editing ? raw.alertas.find((a) => a.id === editing.id)?.lectura : null;
@@ -429,6 +448,25 @@ const RES = {
         { name: 'mensaje', label: 'Mensaje', type: 'text', required: true },
       ];
     },
+  },
+  usuario: {
+    title: 'Usuario',
+    plural: 'Usuarios',
+    recurso: 'usuarios',
+    hint: 'Un usuario puede ser responsable de zonas. Al crearlo se registra también su perfil.',
+    lista: () => raw.usuarios,
+    cabeceras: ['ID', 'Nombre', 'Correo', 'Rol'],
+    celdas: (u) => [u.id, u.nombre, u.email, u.rol],
+    valores: (u) => ({ nombre: u.nombre, email: u.email, rol: u.rol }),
+    campos: () => [
+      { name: 'nombre', label: 'Nombre', type: 'text', required: true },
+      { name: 'email', label: 'Correo', type: 'email', required: true },
+      { name: 'rol', label: 'Rol', type: 'select', options: ['Agricultor', 'Administrador'].map((t) => [t, t]) },
+      ...(editing ? [] : [
+        { name: 'municipio', label: 'Municipio', type: 'text', required: true, perfil: true },
+        { name: 'finca', label: 'Finca', type: 'text', required: true, perfil: true },
+      ]),
+    ],
   },
 };
 
@@ -455,7 +493,7 @@ function renderGestion() {
   const filas = def.lista().slice(0, 100).map((item) => {
     const tr = el('tr', { className: editing?.id === item.id ? 'editing' : '' });
     def.celdas(item).forEach((c) => tr.append(el('td', { textContent: c })));
-    tr.append(el('td', {}, el('div', { className: 'row-actions' }, editButton(tab, item.id), deleteButton(def.recurso, item.id, def.title, () => editing?.id === item.id && (editing = null)))));
+    tr.append(el('td', {}, el('div', { className: 'row-actions' }, ...(def.extra?.(item) ?? []), editButton(tab, item.id), deleteButton(def.recurso, item.id, def.title, () => editing?.id === item.id && (editing = null)))));
     return tr;
   });
   $('tbl-gestion').replaceChildren(
@@ -521,23 +559,21 @@ $('form').addEventListener('submit', async (e) => {
     if (f.type === 'check') continue;
     const v = data.get(f.name);
     const numeric = f.type === 'number' || (f.type === 'select' && f.name.endsWith('Id'));
-    payload[f.name] = numeric ? Number(v) : v;
+    const valor = numeric ? (v === '' ? null : Number(v)) : v;
+    if (f.perfil) (payload.perfil ??= {})[f.name] = valor;
+    else payload[f.name] = valor;
   }
   const submit = e.target.querySelector('button[type=submit]');
   submit.disabled = true;
   try {
     if (editing) {
       const res = await api.update(def.recurso, editing.id, payload);
-      toast(res.message ?? def.title + ' actualizada');
+      toast(res.message ?? def.title + ' actualizado correctamente');
       editing = null;
     } else {
       const res = await api.create(def.recurso, payload);
-      toast(res.message ?? def.title + ' creada');
-      if (tab === 'lectura' && data.get('auto')) {
-        const sensor = raw.sensores.find((s) => s.id === payload.sensorId);
-        const zona = raw.zonas.find((z) => z.id === sensor?.zona?.id);
-        if (zona) await alertaAutomatica(res.data, zona);
-      }
+      toast(res.message ?? def.title + ' guardado correctamente');
+      if (tab === 'lectura') avisoLectura(res);
     }
     e.target.reset();
     await refresh();

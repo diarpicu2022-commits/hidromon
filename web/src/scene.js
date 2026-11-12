@@ -360,7 +360,7 @@ export function createScene(container, onSelect) {
     cono.castShadow = true;
     g.add(cono);
     pulsing.push(cono);
-    const extra = actual.count > 1 ? ' · ' + actual.count + ' sensores' : '';
+    const extra = actual.count > 1 ? ' · ' + actual.count + (actual.count === 1 ? ' alerta' : ' alertas') : '';
     const tag = pill(ICONO_ALERTA + '<b>' + esc(actual.nivel) + extra + '</b>', 'alerta');
     tag.position.set(0, 1, 0);
     cono.add(tag);
