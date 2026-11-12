@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Sensor } from "../../sensores/entities/sensor.entity";
 import { Alerta } from "../../alertas/entities/alerta.entity";
+import { Usuario } from "../../usuarios/entities/usuario.entity";
 
 @Entity({
     name: "zonas",
@@ -43,4 +44,8 @@ export class Zona {
 
     @OneToMany(() => Alerta, (alerta) => alerta.zona)
     alertas: Alerta[];
+
+    @ManyToOne(() => Usuario, (usuario) => usuario.zonas, { nullable: true })
+    @JoinColumn({ name: "usuario_id" })
+    usuario: Usuario | null;
 }
