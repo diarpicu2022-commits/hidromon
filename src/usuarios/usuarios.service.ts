@@ -5,7 +5,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { IUsuario } from './usuario.model';
 import { CreateUsuarioDto, UpdateUsuarioDto } from './dtos/usuario.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,12 +16,12 @@ export class UsuariosService {
 
   constructor(
     @InjectRepository(Usuario)
-    private usuarioRepository: Repository<IUsuario>,
+    private usuarioRepository: Repository<Usuario>,
   ) {}
 
   async findAll() {
     // logica de negocio
-    const usuarios = await this.usuarioRepository.find();
+    const usuarios = await this.usuarioRepository.find({ relations: { perfil: true } });
     return {
       data: usuarios,
       count: usuarios.length,
@@ -61,14 +60,7 @@ export class UsuariosService {
   // Borra el usuario y su perfil en una sola transacción, para no dejar municipio y finca
   // guardados sin dueño. Si el usuario es responsable de zonas no se borra nada.
   async delete(id: number) {
-    // El repositorio está tipado con IUsuario, que no trae el perfil: se consulta la entidad.
-    const usuario = await this.usuarioRepository.manager.findOne(Usuario, {
-      where: { id },
-      relations: { perfil: true },
-    });
-    if (!usuario) {
-      throw new NotFoundException(`Usuario con ID ${id} no existe`);
-    }
+    const usuario = await this.findOne(id);
     let result;
     try {
       result = await this.usuarioRepository.manager.transaction(async (manager) => {
@@ -87,14 +79,30 @@ export class UsuariosService {
     };
   }
 
+  // El perfil llega anidado y se guarda junto con el usuario gracias a cascade: true.
   async update(id: number, changes: UpdateUsuarioDto) {
     const usuario = await this.findOne(id);
-    const updatedUsuario = this.usuarioRepository.merge(usuario, changes);
-    return this.usuarioRepository.save(updatedUsuario);
+    const { perfil, ...fields } = changes;
+    const updatedUsuario = this.usuarioRepository.merge(usuario, fields);
+    if (perfil) {
+      updatedUsuario.perfil = Object.assign(usuario.perfil ?? {}, perfil) as Usuario['perfil'];
+    }
+    try {
+      const savedUsuario = await this.usuarioRepository.save(updatedUsuario);
+      return {
+        message: 'Usuario actualizado correctamente',
+        data: savedUsuario,
+      };
+    } catch {
+      throw new ConflictException(`Ya existe un usuario con el correo ${changes.email}`);
+    }
   }
 
   private async findOne(id: number) {
-    const usuario = await this.usuarioRepository.findOneBy({ id });
+    const usuario = await this.usuarioRepository.findOne({
+      where: { id },
+      relations: { perfil: true },
+    });
     if (!usuario) {
       throw new NotFoundException(`Usuario con ID ${id} no existe`);
     }

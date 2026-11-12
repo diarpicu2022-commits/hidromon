@@ -482,19 +482,17 @@ const RES = {
     plural: 'Usuarios',
     recurso: 'usuarios',
     nuevo: 'Nuevo usuario',
-    hint: 'Un usuario puede ser responsable de zonas. Al crearlo se registra también su perfil.',
+    hint: 'Un usuario puede ser responsable de zonas. Su perfil (municipio y finca) se guarda y se corrige junto con él.',
     lista: () => raw.usuarios,
     cabeceras: ['ID', 'Nombre', 'Correo', 'Rol'],
     celdas: (u) => [u.id, u.nombre, u.email, u.rol],
-    valores: (u) => ({ nombre: u.nombre, email: u.email, rol: u.rol }),
+    valores: (u) => ({ nombre: u.nombre, email: u.email, rol: u.rol, municipio: u.perfil?.municipio ?? '', finca: u.perfil?.finca ?? '' }),
     campos: () => [
       { name: 'nombre', label: 'Nombre', type: 'text', required: true },
       { name: 'email', label: 'Correo', type: 'email', required: true },
       { name: 'rol', label: 'Rol', type: 'select', options: ['Agricultor', 'Administrador'].map((t) => [t, t]) },
-      ...(editing ? [] : [
-        { name: 'municipio', label: 'Municipio', type: 'text', required: true, perfil: true },
-        { name: 'finca', label: 'Finca', type: 'text', required: true, perfil: true },
-      ]),
+      { name: 'municipio', label: 'Municipio', type: 'text', required: true, perfil: true },
+      { name: 'finca', label: 'Finca', type: 'text', required: true, perfil: true },
     ],
   },
 };

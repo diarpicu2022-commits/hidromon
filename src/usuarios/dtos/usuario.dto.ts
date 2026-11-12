@@ -1,5 +1,6 @@
-import { IsEmail, IsNotEmpty, IsString, ValidateNested } from "class-validator";
-import { CreatePerfilDto } from "./perfil.dto";
+import { IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
+import { OmitType, PartialType } from "@nestjs/mapped-types";
+import { CreatePerfilDto, UpdatePerfilDto } from "./perfil.dto";
 import { Type } from "class-transformer";
 
 export class CreateUsuarioDto {
@@ -22,17 +23,11 @@ export class CreateUsuarioDto {
     perfil: CreatePerfilDto;
 }
 
-export class UpdateUsuarioDto {
+// Como en la Clase 7d: los campos del usuario son opcionales y el perfil se corrige anidado.
+export class UpdateUsuarioDto extends PartialType(OmitType(CreateUsuarioDto, ['perfil'])) {
 
-    @IsString()
-    @IsNotEmpty()
-    nombre: string;
-
-    @IsEmail()
-    @IsNotEmpty()
-    email: string;
-
-    @IsString()
-    @IsNotEmpty()
-    rol: string;
+    @ValidateNested()
+    @Type(() => UpdatePerfilDto)
+    @IsOptional()
+    perfil?: UpdatePerfilDto;
 }

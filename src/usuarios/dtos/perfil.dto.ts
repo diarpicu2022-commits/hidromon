@@ -1,3 +1,4 @@
+import { PartialType } from "@nestjs/mapped-types";
 import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class CreatePerfilDto {
@@ -17,3 +18,5 @@ export class CreatePerfilDto {
     @IsOptional()
     avatar: string;
 }
+
+export class UpdatePerfilDto extends PartialType(CreatePerfilDto) {}

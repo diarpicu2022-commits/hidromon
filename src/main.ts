@@ -7,6 +7,9 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
+      // Clase 7c: quita lo que no está en el DTO y responde 400 si llega algo de más.
+      whitelist: true,
+      forbidNonWhitelisted: true,
     }),
   );
   await app.listen(process.env.PORT ?? 3000);
