@@ -3,39 +3,98 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HidroMon · Invernadero 3D</title>
+    <title>HidroMon · Monitoreo de humedad</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app">
-      <aside id="panel">
-        <header>
-          <h1>💧 HidroMon</h1>
-          <p>Invernadero 3D conectado a la API</p>
-        </header>
+      <header class="topbar">
+        <div class="brand">
+          <span class="logo">💧</span>
+          <div>
+            <h1>HidroMon</h1>
+            <p>Monitoreo inteligente de la humedad del suelo</p>
+          </div>
+        </div>
+        <div class="top-info">
+          <span id="online" class="online"><i></i><span>Conectando…</span></span>
+          <span id="clock" class="clock"></span>
+        </div>
+      </header>
 
-        <section id="stats" class="stats"></section>
+      <nav class="sidenav" id="nav">
+        <button data-view="inicio" class="active"><span>🏠</span> Inicio</button>
+        <button data-view="historial"><span>🕘</span> Historial</button>
+        <button data-view="crear"><span>➕</span> Crear datos</button>
+      </nav>
 
-        <section>
-          <h2>Leyenda</h2>
-          <ul id="legend" class="legend"></ul>
-          <p class="hint">Marco blanco = humedad mínima, marco amarillo = máxima. El nivel de agua es el promedio de los sensores. Cilindro = sensor de suelo, esfera = ambiental.</p>
-        </section>
+      <!-- INICIO -->
+      <section id="view-inicio" class="view inicio">
+        <div class="stage card" id="stage">
+          <div id="scene"></div>
+          <div class="legend-chip" id="legend"></div>
+          <div id="detail" hidden></div>
+          <div id="empty" hidden>
+            <h2>Aún no hay zonas</h2>
+            <p>Ve a «Crear datos» y crea una zona; después un sensor, una lectura y una alerta.</p>
+          </div>
+          <p class="stage-hint">Arrastra para girar · rueda para acercar · clic en una zona o sensor para ver su detalle</p>
+        </div>
 
-        <section>
-          <h2>Crear datos</h2>
+        <aside class="side">
+          <section class="card">
+            <div class="card-head">
+              <h2>📊 Datos en tiempo real</h2>
+              <span class="updated"><i></i><span id="updated">–</span></span>
+            </div>
+            <div id="kpis" class="kpis"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>📈 Evolución de la humedad</h2>
+              <div class="chips" id="chips">
+                <button data-h="24" class="active">24h</button>
+                <button data-h="168">7d</button>
+                <button data-h="720">30d</button>
+              </div>
+            </div>
+            <p class="subtle" id="chart-scope">Todas las zonas</p>
+            <canvas id="chart"></canvas>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>✅ Estado del sistema</h2>
+              <span id="sys-badge" class="badge ok">Funcionando</span>
+            </div>
+            <ul id="sys" class="sys"></ul>
+          </section>
+        </aside>
+      </section>
+
+      <!-- HISTORIAL -->
+      <section id="view-historial" class="view historial" hidden>
+        <div class="card">
+          <div class="card-head"><h2>🕘 Últimas lecturas</h2></div>
+          <div class="table-wrap"><table id="tbl-lecturas"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>⚠ Alertas</h2></div>
+          <div class="table-wrap"><table id="tbl-alertas"></table></div>
+        </div>
+      </section>
+
+      <!-- CREAR -->
+      <section id="view-crear" class="view crear" hidden>
+        <div class="card form-card">
+          <div class="card-head"><h2>➕ Crear datos</h2></div>
+          <p class="subtle">Respeta el orden: zona → sensor → lectura → alerta. Cada uno necesita que exista el anterior.</p>
           <div id="tabs" class="tabs"></div>
           <form id="form" autocomplete="off"></form>
-        </section>
-      </aside>
+        </div>
+      </section>
 
-      <main id="scene"></main>
-
-      <section id="detail" hidden></section>
-      <div id="empty" hidden>
-        <h2>Aún no hay zonas</h2>
-        <p>Crea una zona con el panel de la izquierda; después un sensor, una lectura y una alerta.</p>
-      </div>
       <div id="toast" role="status"></div>
     </div>
     <script type="module" src="/src/main.js"></script>
