@@ -4,12 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Env } from './env.model';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { LecturasModule } from './lecturas/lecturas.module';
+import { AlertasModule } from './alertas/alertas.module';
 import { SensoresController } from './sensores/sensores.controller';
 import { ZonasController } from './zonas/zonas.controller';
-import { AlertasController } from './alertas/alertas.controller';
 import { SensoresService } from './sensores/sensores.service';
 import { ZonasService } from './zonas/zonas.service';
-import { AlertasService } from './alertas/alertas.service';
 
 @Module({
   imports: [
@@ -32,8 +31,9 @@ import { AlertasService } from './alertas/alertas.service';
     }),
     UsuariosModule,
     LecturasModule,
+    AlertasModule,
   ],
-  controllers: [SensoresController, ZonasController, AlertasController],
-  providers: [SensoresService, ZonasService, AlertasService],
+  controllers: [SensoresController, ZonasController],
+  providers: [SensoresService, ZonasService],
 })
 export class AppModule {}
