@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -72,7 +73,13 @@ export class SensoresService {
 
   async delete(id: number) {
     const sensor = await this.findOne(id);
-    await this.sensorRepository.delete(sensor.id);
+    try {
+      await this.sensorRepository.delete(sensor.id);
+    } catch {
+      throw new ConflictException(
+        'El sensor tiene lecturas asociadas, no se puede eliminar',
+      );
+    }
     return {
       message: 'Sensor eliminado correctamente',
     };

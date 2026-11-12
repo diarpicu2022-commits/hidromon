@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -74,7 +75,13 @@ export class LecturasService {
 
   async delete(id: number) {
     const lectura = await this.findOne(id);
-    await this.lecturaRepository.delete(lectura.id);
+    try {
+      await this.lecturaRepository.delete(lectura.id);
+    } catch {
+      throw new ConflictException(
+        'La lectura tiene alertas asociadas, no se puede eliminar',
+      );
+    }
     return {
       message: 'Lectura eliminada correctamente',
     };
